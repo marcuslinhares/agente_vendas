@@ -86,6 +86,22 @@ services:
     volumes:
       - ./apps/fastapi:/app
 
+  nestjs:
+    build: ./apps/nestjs
+    ports:
+      - "4000:4000"
+    environment:
+      <<: *common-env
+      DATABASE_URL: postgresql://app:${DB_PASSWORD}@postgres:5432/agentevendas
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
 volumes:
   pgdata:
   redisdata:
