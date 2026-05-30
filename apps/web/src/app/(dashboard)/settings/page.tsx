@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,18 @@ import { Badge } from '@/components/ui/badge';
 
 export default function SettingsPage() {
   const [config, setConfig] = useState({
-    evolutionApiUrl: localStorage.getItem('EVOLUTION_API_URL') || '',
-    openaiKey: localStorage.getItem('OPENAI_API_KEY')?.slice(0, 10) + '...' || '',
-    webhookUrl: typeof window !== 'undefined' ? `${window.location.origin}/webhook/evolution` : '',
+    evolutionApiUrl: '',
+    openaiKey: '',
+    webhookUrl: '',
   });
+
+  useEffect(() => {
+    setConfig({
+      evolutionApiUrl: localStorage.getItem('EVOLUTION_API_URL') || '',
+      openaiKey: localStorage.getItem('OPENAI_API_KEY')?.slice(0, 10) + '...' || '',
+      webhookUrl: `${window.location.origin}/webhook/evolution`,
+    });
+  }, []);
 
   return (
     <div>
