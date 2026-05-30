@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import { entities } from './entities';
 import { StreamModule } from './stream/stream.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { StreamModule } from './stream/stream.module';
         port: parseInt(process.env.REDIS_URL?.split(':')[2] || '6379', 10),
       },
     }),
+    AuthModule,
     StreamModule,
   ],
   controllers: [],
