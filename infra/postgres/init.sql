@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS customers (
     tags            TEXT[] DEFAULT '{}',
     metadata        JSONB DEFAULT '{}',
     last_contact_at TIMESTAMPTZ,
-    updated_at      TIMESTAMPTZ DEFAULT NOW()
+    updated_at      TIMESTAMPTZ DEFAULT NOW(),
     created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
