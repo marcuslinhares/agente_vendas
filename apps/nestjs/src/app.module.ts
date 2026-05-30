@@ -9,6 +9,8 @@ import { MessagesModule } from './modules/messages/messages.module';
 import { ProductsModule } from './modules/products/products.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { ToolsModule } from './modules/tools/tools.module';
+import { MinioModule } from './modules/minio/minio.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { OrdersModule } from './modules/orders/orders.module';
     ProductsModule,
     CustomersModule,
     OrdersModule,
+    ToolsModule,
+    MinioModule,
     StreamModule,
   ],
   controllers: [],
