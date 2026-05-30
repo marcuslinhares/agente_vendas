@@ -6,6 +6,9 @@ import { StreamModule } from './stream/stream.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
 import { MessagesModule } from './modules/messages/messages.module';
+import { ProductsModule } from './modules/products/products.module';
+import { CustomersModule } from './modules/customers/customers.module';
+import { OrdersModule } from './modules/orders/orders.module';
 
 @Module({
   imports: [
@@ -24,6 +27,9 @@ import { MessagesModule } from './modules/messages/messages.module';
     AuthModule,
     ConversationsModule,
     MessagesModule,
+    ProductsModule,
+    CustomersModule,
+    OrdersModule,
     StreamModule,
   ],
   controllers: [],
