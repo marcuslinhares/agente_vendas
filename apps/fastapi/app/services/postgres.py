@@ -10,8 +10,10 @@ pool: Optional[asyncpg.Pool] = None
 async def get_pool() -> asyncpg.Pool:
     global pool
     if pool is None:
+        # Strip SQLAlchemy driver suffix (e.g. postgresql+asyncpg -> postgresql)
+        dsn = settings.database_url.replace("+asyncpg", "", 1)
         pool = await asyncpg.create_pool(
-            dsn=settings.database_url,
+            dsn=dsn,
             min_size=2,
             max_size=10,
         )

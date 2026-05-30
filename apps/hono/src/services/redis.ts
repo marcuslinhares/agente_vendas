@@ -5,7 +5,20 @@ const STREAM_WEBHOOK = "webhook:incoming";
 const STREAM_OUTBOX = "whatsapp:outbox";
 const OUTBOX_GROUP = "hono-workers";
 
-export const redis = new Redis(REDIS_URL);
+export const redis = new Redis(REDIS_URL, {
+  enableOfflineQueue: false,
+  maxRetriesPerRequest: 3,
+});
+
+// Expose a ping helper that doesn't hang
+export async function checkRedis(): Promise<boolean> {
+  try {
+    await redis.ping();
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function ensureOutboxGroup(): Promise<void> {
   try {

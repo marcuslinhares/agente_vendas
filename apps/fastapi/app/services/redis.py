@@ -4,13 +4,15 @@ from typing import AsyncIterator, Optional
 
 from redis.asyncio import Redis
 
+from app.config import settings
+
 redis_client: Optional[Redis] = None
 
 
 async def get_redis() -> Redis:
     global redis_client
     if redis_client is None:
-        redis_client = Redis.from_url("redis://localhost:6379", decode_responses=True)
+        redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
     return redis_client
 
 
