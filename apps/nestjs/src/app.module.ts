@@ -4,6 +4,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { entities } from './entities';
 import { StreamModule } from './stream/stream.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ConversationsModule } from './modules/conversations/conversations.module';
+import { MessagesModule } from './modules/messages/messages.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { AuthModule } from './modules/auth/auth.module';
       },
     }),
     AuthModule,
+    ConversationsModule,
+    MessagesModule,
     StreamModule,
   ],
   controllers: [],
