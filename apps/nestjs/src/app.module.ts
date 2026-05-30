@@ -11,6 +11,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { ToolsModule } from './modules/tools/tools.module';
 import { MinioModule } from './modules/minio/minio.module';
+import { QueueModule } from './queue/queue.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { MinioModule } from './modules/minio/minio.module';
     OrdersModule,
     ToolsModule,
     MinioModule,
+    QueueModule,
     StreamModule,
   ],
   controllers: [],
