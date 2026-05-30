@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- ======================
 
 -- Customers
-CREATE TABLE customers (
+CREATE TABLE IF NOT EXISTS customers (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     whatsapp_id     TEXT UNIQUE NOT NULL,
     name            VARCHAR(200),
@@ -17,11 +17,12 @@ CREATE TABLE customers (
     tags            TEXT[] DEFAULT '{}',
     metadata        JSONB DEFAULT '{}',
     last_contact_at TIMESTAMPTZ,
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
     created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Products
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name            VARCHAR(200) NOT NULL,
     description     TEXT,
@@ -35,7 +36,7 @@ CREATE TABLE products (
 );
 
 -- Dynamic tools catalog
-CREATE TABLE tools_catalog (
+CREATE TABLE IF NOT EXISTS tools_catalog (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name            VARCHAR(100) NOT NULL UNIQUE,
     description     TEXT NOT NULL,
@@ -53,7 +54,7 @@ CREATE TABLE tools_catalog (
 );
 
 -- CRM users
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email           VARCHAR(255) UNIQUE NOT NULL,
     password_hash   VARCHAR(255) NOT NULL,
@@ -63,7 +64,7 @@ CREATE TABLE users (
 );
 
 -- Conversations
-CREATE TABLE conversations (
+CREATE TABLE IF NOT EXISTS conversations (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     whatsapp_id     TEXT NOT NULL UNIQUE,
     customer_id     UUID REFERENCES customers(id) ON DELETE SET NULL,
@@ -72,13 +73,13 @@ CREATE TABLE conversations (
     summary         TEXT,
     summary_version INT DEFAULT 0,
     message_count   INT DEFAULT 0,
-    classification  VARCHAR(50),
+    classification  VARCHAR(50) CHECK (classification IN ('lead_quente','lead_morno','lead_frio','cliente')),
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Messages
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     message_id      TEXT UNIQUE NOT NULL,
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -92,7 +93,7 @@ CREATE TABLE messages (
 );
 
 -- Orders
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_id     UUID NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
     conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
@@ -105,7 +106,7 @@ CREATE TABLE orders (
 );
 
 -- Message embeddings (L3 memory + vector search)
-CREATE TABLE message_embeddings (
+CREATE TABLE IF NOT EXISTS message_embeddings (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     message_id      UUID REFERENCES messages(id) ON DELETE SET NULL,
@@ -118,7 +119,7 @@ CREATE TABLE message_embeddings (
 );
 
 -- Product embeddings (RAG catalog)
-CREATE TABLE product_embeddings (
+CREATE TABLE IF NOT EXISTS product_embeddings (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id      UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     content         TEXT,
@@ -129,7 +130,7 @@ CREATE TABLE product_embeddings (
 );
 
 -- Tool execution log
-CREATE TABLE tool_execution_log (
+CREATE TABLE IF NOT EXISTS tool_execution_log (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tool_name       VARCHAR(100) NOT NULL,
     conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
@@ -146,23 +147,25 @@ CREATE TABLE tool_execution_log (
 -- ======================
 
 -- Vector indexes (IVFFlat)
-CREATE INDEX idx_msg_embeddings_conv ON message_embeddings
+CREATE INDEX IF NOT EXISTS idx_msg_embeddings_conv ON message_embeddings
     USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-CREATE INDEX idx_msg_embeddings_clip ON message_embeddings
+CREATE INDEX IF NOT EXISTS idx_msg_embeddings_clip ON message_embeddings
     USING ivfflat (embedding_clip vector_cosine_ops) WITH (lists = 100);
-CREATE INDEX idx_product_embeddings ON product_embeddings
+CREATE INDEX IF NOT EXISTS idx_product_embeddings ON product_embeddings
     USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-CREATE INDEX idx_product_embeddings_clip ON product_embeddings
+CREATE INDEX IF NOT EXISTS idx_product_embeddings_clip ON product_embeddings
     USING ivfflat (embedding_clip vector_cosine_ops) WITH (lists = 100);
 
 -- B-tree indexes for query performance
-CREATE INDEX idx_messages_conv_created ON messages(conversation_id, created_at DESC);
-CREATE INDEX idx_conversations_whatsapp ON conversations(whatsapp_id);
-CREATE INDEX idx_conversations_status ON conversations(status);
-CREATE INDEX idx_conversations_classification ON conversations(classification);
-CREATE INDEX idx_customers_classification ON customers(classification);
-CREATE INDEX idx_orders_customer ON orders(customer_id);
-CREATE INDEX idx_orders_status ON orders(status);
-CREATE INDEX idx_embeddings_conv_created ON message_embeddings(conversation_id, created_at DESC);
-CREATE INDEX idx_tools_active ON tools_catalog(is_active) WHERE is_active = true;
-CREATE INDEX idx_tool_log_created ON tool_execution_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_conv_created ON messages(conversation_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_conversations_whatsapp ON conversations(whatsapp_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_customer ON conversations(customer_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
+CREATE INDEX IF NOT EXISTS idx_conversations_classification ON conversations(classification);
+CREATE INDEX IF NOT EXISTS idx_customers_classification ON customers(classification);
+CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_embeddings_conv_created ON message_embeddings(conversation_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tools_active ON tools_catalog(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_tool_log_created ON tool_execution_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tool_log_conv ON tool_execution_log(conversation_id);
