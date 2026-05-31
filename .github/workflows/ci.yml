@@ -6,9 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  COVERAGE_MIN_PYTHON: 70
+  COVERAGE_MIN_TYPESCRIPT: 60
+
 jobs:
   quality-python:
-    name: Python (FastAPI)
+    name: Python Quality (FastAPI)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -19,20 +23,23 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-      - run: pip install -q ruff mypy bandit pytest pytest-asyncio 2>&1 | tail -3
-      - name: Lint (Ruff)
+      - run: pip install -q ruff mypy bandit pytest pytest-asyncio pytest-cov radon xenon 2>&1 | tail -3
+      - name: 🔴 Lint (Ruff) — MUST PASS
         run: ruff check app/ tests/
-      - name: Format check (Ruff)
+      - name: 🔴 Format check (Ruff) — MUST PASS
         run: ruff format --check app/ tests/
-      - name: Type check (mypy)
-        run: mypy app/ --ignore-missing-imports || true
-      - name: Security (bandit)
-        run: bandit -r app/ -ll -q || true
-      - name: Tests
-        run: python -m pytest tests/ -v --tb=short 2>&1 | tail -10
+      - name: 🟡 Type check (mypy) — non-blocking
+        run: mypy app/ --ignore-missing-imports || echo "⚠️ mypy warnings — review manually"
+      - name: 🟡 Security (bandit) — non-blocking
+        run: bandit -r app/ -ll -q || echo "⚠️ Security issues found — review"
+      - name: 🔴 Complexity (xenon) — MUST PASS
+        run: xenon app/ --max-absolute B --max-modules B --max-average A
+      - name: 🔴 Tests + Coverage — MUST PASS
+        run: |
+          python -m pytest tests/ -v --tb=short --cov=app --cov-fail-under=${{ env.COVERAGE_MIN_PYTHON }} --cov-report=term-missing 2>&1 | tail -30
 
   quality-typescript:
-    name: TypeScript (Hono + NestJS + Web)
+    name: TypeScript Quality (Hono + NestJS + Web)
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -48,15 +55,19 @@ jobs:
           cache: 'npm'
           cache-dependency-path: apps/${{ matrix.app }}/package-lock.json
       - run: npm ci 2>&1 | tail -3
-      - name: Type check
+      - name: 🔴 TypeScript compile — MUST PASS
         run: npx tsc --noEmit 2>&1
-      - name: Lint (ESLint)
-        run: npx eslint src/ --ext .ts,.tsx 2>&1 || echo "Set up ESLint config for full checks"
-      - name: Build
-        run: npm run build 2>&1 | tail -5
+      - name: 🔴 Lint (ESLint) — MUST PASS
+        run: npx eslint src/ --ext .ts,.tsx 2>&1
+      - name: 🔴 Build — MUST PASS
+        run: npm run build 2>&1 | tail -10
+      - name: 🔴 Tests + Coverage — MUST PASS
+        if: matrix.app == 'nestjs'
+        run: |
+          npx jest --config jest.config.ts --forceExit --coverage --coverageThreshold='{"global":{"branches":60,"functions":60,"lines":60,"statements":60}}' 2>&1 | tail -20
 
   quality-complexity:
-    name: Complexity Gates
+    name: 🔴 Complexity Gates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,23 +77,25 @@ jobs:
       - name: Check Python complexity
         run: |
           pip install -q radon xenon 2>&1 | tail -1
-          echo "=== Python complexity (warn if any file > A) ==="
+          echo "=== Cyclomatic complexity (files with score > A) ==="
           radon cc apps/fastapi/app/ -a -s || true
-          echo "=== Block complexity ==="
-          xenon apps/fastapi/app/ --max-absolute B --max-modules B --max-average A || echo "Complexity check passed"
+          echo "=== Block complexity gate ==="
+          xenon apps/fastapi/app/ --max-absolute B --max-modules B --max-average A
 
   quality-secrets:
-    name: Secrets Scan
+    name: 🔴 Secrets Scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Scan for secrets
         uses: trufflesecurity/trufflehog@v3
         with:
           extra_args: --results=verified,unknown --no-fail
 
   quality-dependencies:
-    name: Dependency Audit
+    name: 🟡 Dependency Audit
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -95,4 +108,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm audit --audit-level=high 2>&1 || echo "Vulnerabilities found — review manually"
+      - run: npm audit --audit-level=high 2>&1 || echo "⚠️ Vulnerabilities found — review manually"

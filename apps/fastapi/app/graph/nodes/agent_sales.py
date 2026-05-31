@@ -49,6 +49,48 @@ class SalesAgentNode:
 
         return "\n".join(parts)
 
+    async def _check_cache(self, intent: str, user_msg: str) -> str | None:
+        """Check semantic cache for simple intents."""
+        if intent not in {"saudacao", "agradecimento", "duvida"}:
+            return None
+        from app.services.cache import get_cached_response
+
+        cached = await get_cached_response(user_msg)
+        if cached:
+            print(f"[sales_agent] Cache hit for '{intent}' intent")
+        return cached
+
+    async def _set_cache(self, intent: str, user_msg: str, content: str) -> None:
+        """Cache successful responses for simple intents."""
+        if intent not in {"saudacao", "agradecimento", "duvida"} or not content:
+            return
+        from app.services.cache import set_cached_response
+
+        await set_cached_response(user_msg, content)
+
+    async def _execute_tool_calls(self, msg, tool_calls_data: list[dict]) -> list[dict]:
+        """Execute all tool calls in parallel and return tool result messages."""
+
+        async def execute_tool(tc) -> dict:
+            tool_calls_data.append(
+                {
+                    "name": tc.function.name,
+                    "arguments": tc.function.arguments,
+                }
+            )
+            try:
+                args = json.loads(tc.function.arguments)
+                result = await self.tool_registry.execute(tc.function.name, args)
+            except Exception as e:
+                result = f"Error executing {tc.function.name}: {str(e)}"
+            return {
+                "role": "tool",
+                "tool_call_id": tc.id,
+                "content": str(result)[:2000],
+            }
+
+        return await asyncio.gather(*[execute_tool(tc) for tc in msg.tool_calls])
+
     async def run(self, state: AgentState) -> dict:
         if self._client is None:
             self._client = create_llm_client()
@@ -59,17 +101,13 @@ class SalesAgentNode:
         user_msg = state.get("parsed_content") or state.get("raw_content", "")
         intent = state.get("intent", "")
 
-        if intent in {"saudacao", "agradecimento", "duvida"}:
-            from app.services.cache import get_cached_response
-
-            cached = await get_cached_response(user_msg)
-            if cached:
-                print(f"[sales_agent] Cache hit for '{intent}' intent")
-                return {
-                    "agent_response": cached,
-                    "tool_calls": [],
-                    "metadata": {"intent": intent, "cached": True},
-                }
+        cached = await self._check_cache(intent, user_msg)
+        if cached:
+            return {
+                "agent_response": cached,
+                "tool_calls": [],
+                "metadata": {"intent": intent, "cached": True},
+            }
 
         model = get_chat_model(intent)
 
@@ -92,11 +130,11 @@ class SalesAgentNode:
             {"role": "system", "content": system_prompt},
             {
                 "role": "user",
-                "content": state.get("parsed_content") or state.get("raw_content", ""),
+                "content": user_msg,
             },
         ]
 
-        tool_calls_data = []
+        tool_calls_data: list[dict] = []
         turn = 0
 
         while turn < self.max_turns:
@@ -113,12 +151,7 @@ class SalesAgentNode:
 
             # If no tool calls, we're done — use this response
             if not msg.tool_calls:
-                # Cache successful responses for simple intents
-                if intent in {"saudacao", "agradecimento", "duvida"} and msg.content:
-                    from app.services.cache import set_cached_response
-
-                    await set_cached_response(user_msg, msg.content)
-
+                self._set_cache(intent, user_msg, msg.content)
                 return {
                     "agent_response": msg.content
                     or "Desculpe, não consegui processar sua solicitação.",
@@ -128,29 +161,7 @@ class SalesAgentNode:
 
             # Execute tool calls and append results
             messages.append(msg)
-
-            # Execute all tool calls in parallel
-            async def execute_tool(tc: any) -> dict:
-                tool_calls_data.append(
-                    {
-                        "name": tc.function.name,
-                        "arguments": tc.function.arguments,
-                    }
-                )
-
-                try:
-                    args = json.loads(tc.function.arguments)
-                    result = await self.tool_registry.execute(tc.function.name, args)
-                except Exception as e:
-                    result = f"Error executing {tc.function.name}: {str(e)}"
-
-                return {
-                    "role": "tool",
-                    "tool_call_id": tc.id,
-                    "content": str(result)[:2000],
-                }
-
-            results = await asyncio.gather(*[execute_tool(tc) for tc in msg.tool_calls])
+            results = await self._execute_tool_calls(msg, tool_calls_data)
             messages.extend(results)
 
         # If we hit max turns without a content response, use the last message

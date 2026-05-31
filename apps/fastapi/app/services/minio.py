@@ -3,10 +3,10 @@ from botocore.config import Config
 
 from app.config import settings
 
-client: boto3.client | None = None
+client = None  # type: ignore
 
 
-def get_minio() -> boto3.client:
+def get_minio():
     global client
     if client is None:
         client = boto3.client(

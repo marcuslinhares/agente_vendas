@@ -20,3 +20,11 @@ strict = false
 ignore_missing_imports = true
 warn_unused_configs = true
 disallow_untyped_defs = false
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
