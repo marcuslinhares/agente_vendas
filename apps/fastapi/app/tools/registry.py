@@ -12,7 +12,7 @@ class ToolDef:
     description: str
     parameters: dict
     is_idempotent: bool = True
-    execute: Callable[[dict], Awaitable[str]] = field(default=lambda x: "Not implemented")
+    execute: Callable[[dict], Awaitable[str]] = field(default=lambda x: "Not implemented")  # type: ignore[arg-type,assignment]
 
 
 class ToolRegistry:

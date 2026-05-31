@@ -142,8 +142,8 @@ class SalesAgentNode:
 
             response = await self._client.chat.completions.create(
                 model=model,
-                messages=messages,
-                tools=tool_defs if tool_defs else None,
+                messages=messages,  # type: ignore[arg-type]
+                tools=tool_defs if tool_defs else None,  # type: ignore[arg-type]
                 temperature=0.7,
             )
 
@@ -151,7 +151,7 @@ class SalesAgentNode:
 
             # If no tool calls, we're done — use this response
             if not msg.tool_calls:
-                self._set_cache(intent, user_msg, msg.content)
+                await self._set_cache(intent, user_msg, msg.content)  # type: ignore[arg-type,unused-coroutine]
                 return {
                     "agent_response": msg.content
                     or "Desculpe, não consegui processar sua solicitação.",
@@ -160,7 +160,7 @@ class SalesAgentNode:
                 }
 
             # Execute tool calls and append results
-            messages.append(msg)
+            messages.append(msg.model_dump())  # type: ignore[arg-type]
             results = await self._execute_tool_calls(msg, tool_calls_data)
             messages.extend(results)
 

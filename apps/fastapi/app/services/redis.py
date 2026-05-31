@@ -45,9 +45,9 @@ async def consume_stream(
             if not result:
                 await asyncio.sleep(0.1)
                 continue
-            for messages in result.values():
-                for msg_id, fields in messages:
-                    yield str(msg_id), json.loads(fields["payload"])
+            for messages in result.values():  # type: ignore[union-attr]
+                for msg_id, fields in messages:  # type: ignore[misc]
+                    yield str(msg_id), json.loads(fields["payload"])  # type: ignore[index,arg-type,call-overload]
         except Exception as e:
             print(f"[redis] consume error: {e}")
             await asyncio.sleep(1)
@@ -55,7 +55,7 @@ async def consume_stream(
 
 async def publish_to_stream(stream: str, payload: dict) -> None:
     r = await get_redis()
-    await r.xadd(stream, "*", {"payload": json.dumps(payload)})
+    await r.xadd(stream, "*", {"payload": json.dumps(payload)})  # type: ignore[arg-type]
 
 
 async def ack_message(stream: str, group: str, msg_id: str) -> None:

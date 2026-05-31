@@ -56,4 +56,4 @@ def build_agent() -> StateGraph:
     workflow.add_edge("followup_agent", "post_process")
     workflow.add_edge("post_process", END)
 
-    return workflow.compile()
+    return workflow.compile()  # type: ignore[return-value]

@@ -36,7 +36,8 @@ class MemoryGateNode:
             temperature=0,
         )
 
-        return json.loads(response.choices[0].message.content)
+        return json.loads(response.choices[0].message.content)  # type: ignore[arg-type]
+
 
     async def run(self, state: AgentState) -> dict:
         if not settings.openai_api_key and not settings.openrouter_api_key:

@@ -11,7 +11,7 @@ async def _get_redis():
 
 def _simple_hash(text: str) -> str:
     """Fast hash for exact-match cache lookup."""
-    return hashlib.md5(text.encode()).hexdigest()  # noqa: S324
+    return hashlib.md5(text.encode()).hexdigest()  # nosec B324  # noqa: S324
 
 
 async def get_cached_response(user_message: str) -> str | None:

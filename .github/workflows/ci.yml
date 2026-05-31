@@ -29,9 +29,9 @@ jobs:
       - name: 🔴 Format check (Ruff) — MUST PASS
         run: ruff format --check app/ tests/
       - name: 🟡 Type check (mypy) — non-blocking
-        run: mypy app/ --ignore-missing-imports || echo "⚠️ mypy warnings — review manually"
+        run: mypy app/ --ignore-missing-imports
       - name: 🟡 Security (bandit) — non-blocking
-        run: bandit -r app/ -ll -q || echo "⚠️ Security issues found — review"
+        run: bandit -r app/ -ll -q
       - name: 🔴 Complexity (xenon) — MUST PASS
         run: xenon app/ --max-absolute B --max-modules B --max-average A
       - name: 🔴 Tests + Coverage — MUST PASS
