@@ -1,0 +1,237 @@
+"""Unit tests for ParseClassifyNode."""
+
+import pytest
+from unittest.mock import AsyncMock, patch
+
+from app.graph.state import AgentState
+from app.graph.nodes.parse_classify import ParseClassifyNode
+
+
+@pytest.mark.asyncio
+async def test_parse_classify_creates_conversation():
+    """Should create a conversation for a new whatsapp_id."""
+    node = ParseClassifyNode()
+
+    state: AgentState = {
+        "whatsapp_id": "5511999999999@c.us",
+        "conversation_id": "",
+        "message_id": "test-ulid",
+        "raw_content": "Gostaria de saber mais sobre os produtos",
+        "media_url": None,
+        "media_type": None,
+        "parsed_content": "",
+        "intent": "",
+        "customer_id": None,
+        "l1_messages": [],
+        "l2_summary": "",
+        "l3_memories": [],
+        "l3_triggered": False,
+        "agent_response": "",
+        "tool_calls": [],
+        "metadata": {},
+        "embedding_clip": None,
+        "embedding_text": None,
+    }
+
+    # Mock the postgres calls — patch where they are used (in parse_classify module)
+    with patch(
+        "app.graph.nodes.parse_classify.get_conversation_by_whatsapp",
+        new_callable=AsyncMock,
+    ) as mock_get:
+        mock_get.return_value = None
+        with patch(
+            "app.graph.nodes.parse_classify.create_conversation",
+            new_callable=AsyncMock,
+        ) as mock_create:
+            mock_create.return_value = {
+                "id": "new-uuid",
+                "status": "active",
+                "message_count": 0,
+            }
+
+            result = await node.run(state)
+
+            assert result["conversation_id"] == "new-uuid"
+            assert result["parsed_content"] == "Gostaria de saber mais sobre os produtos"
+            assert result["intent"] == "duvida"
+
+            mock_get.assert_awaited_once_with("5511999999999@c.us")
+            mock_create.assert_awaited_once_with("5511999999999@c.us")
+
+
+@pytest.mark.asyncio
+async def test_parse_classify_detects_order_intent():
+    """Should detect 'pedido' intent when user mentions buying."""
+    node = ParseClassifyNode()
+
+    state: AgentState = {
+        "whatsapp_id": "5511999999999@c.us",
+        "conversation_id": "",
+        "message_id": "test-ulid",
+        "raw_content": "Quero comprar uma camiseta",
+        "media_url": None,
+        "media_type": None,
+        "parsed_content": "",
+        "intent": "",
+        "customer_id": None,
+        "l1_messages": [],
+        "l2_summary": "",
+        "l3_memories": [],
+        "l3_triggered": False,
+        "agent_response": "",
+        "tool_calls": [],
+        "metadata": {},
+        "embedding_clip": None,
+        "embedding_text": None,
+    }
+
+    with patch(
+        "app.graph.nodes.parse_classify.get_conversation_by_whatsapp",
+        new_callable=AsyncMock,
+    ) as mock_get:
+        mock_get.return_value = {
+            "id": "existing-uuid",
+            "status": "active",
+            "message_count": 5,
+        }
+        with patch(
+            "app.graph.nodes.parse_classify.create_conversation",
+            new_callable=AsyncMock,
+        ):
+            result = await node.run(state)
+
+            assert result["intent"] == "pedido"
+
+
+@pytest.mark.asyncio
+async def test_parse_classify_detects_greeting():
+    """Should detect 'saudacao' intent for greetings."""
+    node = ParseClassifyNode()
+
+    state: AgentState = {
+        "whatsapp_id": "5511999999999@c.us",
+        "conversation_id": "",
+        "message_id": "test-ulid",
+        "raw_content": "Bom dia! Tudo bem?",
+        "media_url": None,
+        "media_type": None,
+        "parsed_content": "",
+        "intent": "",
+        "customer_id": None,
+        "l1_messages": [],
+        "l2_summary": "",
+        "l3_memories": [],
+        "l3_triggered": False,
+        "agent_response": "",
+        "tool_calls": [],
+        "metadata": {},
+        "embedding_clip": None,
+        "embedding_text": None,
+    }
+
+    with patch(
+        "app.graph.nodes.parse_classify.get_conversation_by_whatsapp",
+        new_callable=AsyncMock,
+    ) as mock_get:
+        mock_get.return_value = {
+            "id": "existing-uuid",
+            "status": "active",
+            "message_count": 5,
+        }
+        with patch(
+            "app.graph.nodes.parse_classify.create_conversation",
+            new_callable=AsyncMock,
+        ):
+            result = await node.run(state)
+
+            assert result["intent"] == "saudacao"
+
+
+@pytest.mark.asyncio
+async def test_parse_classify_reuses_existing_conversation():
+    """Should use existing conversation when whatsapp_id is known."""
+    node = ParseClassifyNode()
+
+    state: AgentState = {
+        "whatsapp_id": "5511988888888@c.us",
+        "conversation_id": "",
+        "message_id": "test-ulid-2",
+        "raw_content": "Qual o preço?",
+        "media_url": None,
+        "media_type": None,
+        "parsed_content": "",
+        "intent": "",
+        "customer_id": None,
+        "l1_messages": [],
+        "l2_summary": "",
+        "l3_memories": [],
+        "l3_triggered": False,
+        "agent_response": "",
+        "tool_calls": [],
+        "metadata": {},
+        "embedding_clip": None,
+        "embedding_text": None,
+    }
+
+    with patch(
+        "app.graph.nodes.parse_classify.get_conversation_by_whatsapp",
+        new_callable=AsyncMock,
+    ) as mock_get:
+        mock_get.return_value = {
+            "id": "existing-uuid-2",
+            "status": "active",
+            "message_count": 3,
+        }
+        with patch(
+            "app.graph.nodes.parse_classify.create_conversation",
+            new_callable=AsyncMock,
+        ) as mock_create:
+            result = await node.run(state)
+
+            assert result["conversation_id"] == "existing-uuid-2"
+            # Should NOT create a new conversation
+            mock_create.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_parse_classify_detects_thanks():
+    """Should detect 'agradecimento' intent."""
+    node = ParseClassifyNode()
+
+    state: AgentState = {
+        "whatsapp_id": "5511999999999@c.us",
+        "conversation_id": "",
+        "message_id": "test-ulid",
+        "raw_content": "Muito obrigado pela ajuda!",
+        "media_url": None,
+        "media_type": None,
+        "parsed_content": "",
+        "intent": "",
+        "customer_id": None,
+        "l1_messages": [],
+        "l2_summary": "",
+        "l3_memories": [],
+        "l3_triggered": False,
+        "agent_response": "",
+        "tool_calls": [],
+        "metadata": {},
+        "embedding_clip": None,
+        "embedding_text": None,
+    }
+
+    with patch(
+        "app.graph.nodes.parse_classify.get_conversation_by_whatsapp",
+        new_callable=AsyncMock,
+    ) as mock_get:
+        mock_get.return_value = {
+            "id": "existing-uuid",
+            "status": "active",
+            "message_count": 5,
+        }
+        with patch(
+            "app.graph.nodes.parse_classify.create_conversation",
+            new_callable=AsyncMock,
+        ):
+            result = await node.run(state)
+
+            assert result["intent"] == "agradecimento"
