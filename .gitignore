@@ -8,3 +8,5 @@ __pycache__/
 .next/
 *.tsbuildinfo
 .next/
+.coverage
+__pycache__/
