@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from openai import AsyncOpenAI
@@ -101,7 +102,8 @@ class AgentExecuteNode:
             # Execute tool calls and append results
             messages.append(msg)
 
-            for tc in msg.tool_calls:
+            # Execute all tool calls in parallel
+            async def execute_tool(tc: any) -> dict:
                 tool_calls_data.append({
                     "name": tc.function.name,
                     "arguments": tc.function.arguments,
@@ -113,11 +115,16 @@ class AgentExecuteNode:
                 except Exception as e:
                     result = f"Error executing {tc.function.name}: {str(e)}"
 
-                messages.append({
+                return {
                     "role": "tool",
                     "tool_call_id": tc.id,
                     "content": str(result)[:2000],
-                })
+                }
+
+            results = await asyncio.gather(
+                *[execute_tool(tc) for tc in msg.tool_calls]
+            )
+            messages.extend(results)
 
         # If we hit max turns without a content response, use the last message
         return {
