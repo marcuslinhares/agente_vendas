@@ -38,7 +38,6 @@ class MemoryGateNode:
 
         return json.loads(response.choices[0].message.content)  # type: ignore[arg-type]
 
-
     async def run(self, state: AgentState) -> dict:
         if not settings.openai_api_key and not settings.openrouter_api_key:
             print("[memory_gate] No LLM API key configured — skipping gate")

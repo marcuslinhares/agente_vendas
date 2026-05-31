@@ -31,7 +31,7 @@ async def _get_order_status(params: dict) -> str:
     )
     if not row:
         return "Pedido não encontrado."
-    return f"Status: {row["status"]}. Total: R$ {float(row["total"]):.2f}. Em: {row["created_at"]}"
+    return f"Status: {row['status']}. Total: R$ {float(row['total']):.2f}. Em: {row['created_at']}"
 
 
 def register_orders_tools(registry: ToolRegistry) -> None:

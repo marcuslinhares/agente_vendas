@@ -48,7 +48,6 @@ class PostProcessNode:
             self._text_embedder = create_llm_client()  # type: ignore[assignment]
 
         response = await self._text_embedder.embeddings.create(  # type: ignore[attr-defined]
-
             model=get_embedding_model(),
             input=text,
         )
@@ -69,7 +68,8 @@ class PostProcessNode:
                 # URL format: http://minio:9000/conversations-media/{key}
                 url_path = state["media_url"]
                 parts = url_path.split(  # type: ignore[union-attr]
-"/")
+                    "/"
+                )
                 bucket = parts[-2] if len(parts) >= 2 else "conversations-media"
                 key = "/".join(parts[-2:])
                 image_bytes = download_media(bucket, key)
