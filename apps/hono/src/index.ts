@@ -37,6 +37,18 @@ async function startOutboxConsumer(): Promise<void> {
 
 const PORT = parseInt(process.env.HONO_PORT || "3000", 10);
 
+// REQUIRED: Webhook secret must be configured
+if (!process.env.EVOLUTION_WEBHOOK_SECRET) {
+  console.error("❌ EVOLUTION_WEBHOOK_SECRET is required but not set");
+  process.exit(1);
+}
+
+// REQUIRED: Evolution API URL must be configured
+if (!process.env.EVOLUTION_API_URL) {
+  console.error("❌ EVOLUTION_API_URL is required but not set");
+  process.exit(1);
+}
+
 serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`✅ Hono server running on port ${PORT}`);
   startOutboxConsumer().catch(console.error);

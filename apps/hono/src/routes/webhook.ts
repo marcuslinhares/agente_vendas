@@ -10,15 +10,17 @@ webhook.post("/webhook/evolution", async (c) => {
   const signature = c.req.header("x-evolution-signature");
   const body = await c.req.text();
 
-  if (signature) {
-    try {
-      const valid = await verifyWebhook(signature, body);
-      if (!valid) {
-        return c.json({ error: "invalid signature" }, 401);
-      }
-    } catch {
-      return c.json({ error: "signature verification failed" }, 401);
+  // REQUIRED: Webhook signature verification
+  if (!signature) {
+    return c.json({ error: "missing signature header" }, 401);
+  }
+  try {
+    const valid = await verifyWebhook(signature, body);
+    if (!valid) {
+      return c.json({ error: "invalid signature" }, 401);
     }
+  } catch {
+    return c.json({ error: "signature verification failed" }, 401);
   }
 
   let data: any;
