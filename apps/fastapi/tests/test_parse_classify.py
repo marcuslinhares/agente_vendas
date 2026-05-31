@@ -1,10 +1,11 @@
 """Unit tests for ParseClassifyNode."""
 
-import pytest
 from unittest.mock import AsyncMock, patch
 
-from app.graph.state import AgentState
+import pytest
+
 from app.graph.nodes.parse_classify import ParseClassifyNode
+from app.graph.state import AgentState
 
 
 @pytest.mark.asyncio
