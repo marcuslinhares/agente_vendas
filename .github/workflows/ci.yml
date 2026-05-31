@@ -118,7 +118,7 @@ jobs:
       - name: Scan for secrets
         uses: trufflesecurity/trufflehog@v3.88.17
         with:
-          extra_args: --results=verified,unknown --no-fail
+          extra_args: --results=verified,unknown
 
   quality-dependencies:
     name: 🟡 Dependency Audit
