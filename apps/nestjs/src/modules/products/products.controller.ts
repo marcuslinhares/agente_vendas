@@ -30,7 +30,31 @@ class CreateProductDto {
   stock?: number;
 }
 
-class UpdateProductDto extends CreateProductDto {
+class UpdateProductDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  price?: number;
+
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  stock?: number;
+
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
