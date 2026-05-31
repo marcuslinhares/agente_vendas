@@ -22,23 +22,28 @@ class AgentExecuteNode:
             "",
         ]
 
-        # L1: Recent messages
+        # L1: Recent messages (fewer for simple intents to save tokens)
+        intent = state.get("intent", "")
+        max_l1 = 3 if intent in {"saudacao", "agradecimento"} else 10
+
         if state.get("l1_messages"):
             parts.append("=== Recent conversation ===")
-            for m in reversed(state["l1_messages"]):
-                parts.append(f"{m['role']}: {str(m.get('content', ''))[:500]}")
+            for m in reversed(state["l1_messages"][-max_l1:]):
+                content = str(m.get("content", ""))[:300]
+                parts.append(f"{m['role']}: {content}")
             parts.append("")
 
         # L2: Summary
         if state.get("l2_summary"):
             parts.append(f"=== Conversation summary ===\n{state['l2_summary']}\n")
 
-        # L3: Old memories
+        # L3: Old memories (truncated)
         if state.get("l3_memories"):
             parts.append("=== Relevant past context ===")
-            for m in state["l3_memories"]:
+            for m in state["l3_memories"][:3]:  # max 3 memories
                 score = m.get("score", 0)
-                parts.append(f"- {str(m.get('content', ''))[:300]} (relevance: {score:.2f})")
+                content = str(m.get("content", ""))[:200]
+                parts.append(f"- {content} (relevance: {score:.2f})")
             parts.append("")
 
         return "\n".join(parts)
@@ -48,7 +53,7 @@ class AgentExecuteNode:
             self._client = create_llm_client()
 
         system_prompt = self._build_system_prompt(state)
-        model = get_chat_model()
+        model = get_chat_model(state.get("intent", ""))
 
         # Load available tools
         tools = await self.tool_registry.load_all()

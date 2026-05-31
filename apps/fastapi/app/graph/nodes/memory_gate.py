@@ -4,6 +4,7 @@ from openai import AsyncOpenAI
 
 from app.graph.state import AgentState
 from app.config import settings
+from app.services.llm import create_llm_client, get_memory_gate_model
 
 
 class MemoryGateNode:
@@ -12,7 +13,7 @@ class MemoryGateNode:
 
     async def _call_llm(self, user_msg: str, history: list[dict]) -> dict:
         if self._client is None:
-            self._client = AsyncOpenAI(api_key=settings.openai_api_key)
+            self._client = create_llm_client()
 
         messages_text = "\n".join(
             f"- {m['role']}: {str(m.get('content', ''))[:200]}"
@@ -29,7 +30,7 @@ class MemoryGateNode:
         )
 
         response = await self._client.chat.completions.create(
-            model=settings.openai_model,
+            model=get_memory_gate_model(),
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
             temperature=0,
@@ -38,8 +39,8 @@ class MemoryGateNode:
         return json.loads(response.choices[0].message.content)
 
     async def run(self, state: AgentState) -> dict:
-        if not settings.openai_api_key:
-            print("[memory_gate] No OpenAI API key configured — skipping gate")
+        if not settings.openai_api_key and not settings.openrouter_api_key:
+            print("[memory_gate] No LLM API key configured — skipping gate")
             return {"l3_triggered": False}
 
         try:
