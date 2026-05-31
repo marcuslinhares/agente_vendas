@@ -54,7 +54,24 @@ class AgentExecuteNode:
             self._client = create_llm_client()
 
         system_prompt = self._build_system_prompt(state)
-        model = get_chat_model(state.get("intent", ""))
+
+        # Check semantic cache (only for simple intents — saves cost)
+        user_msg = state.get("parsed_content") or state.get("raw_content", "")
+        intent = state.get("intent", "")
+
+        if intent in {"saudacao", "agradecimento", "duvida"}:
+            from app.services.cache import get_cached_response
+
+            cached = await get_cached_response(user_msg)
+            if cached:
+                print(f"[agent_execute] Cache hit for '{intent}' intent")
+                return {
+                    "agent_response": cached,
+                    "tool_calls": [],
+                    "metadata": {"intent": intent, "cached": True},
+                }
+
+        model = get_chat_model(intent)
 
         # Load available tools
         tools = await self.tool_registry.load_all()
@@ -93,10 +110,16 @@ class AgentExecuteNode:
 
             # If no tool calls, we're done — use this response
             if not msg.tool_calls:
+                # Cache successful responses for simple intents
+                if intent in {"saudacao", "agradecimento", "duvida"} and msg.content:
+                    from app.services.cache import set_cached_response
+
+                    await set_cached_response(user_msg, msg.content)
+
                 return {
                     "agent_response": msg.content or "Desculpe, não consegui processar sua solicitação.",
                     "tool_calls": tool_calls_data,
-                    "metadata": {"intent": state.get("intent", "unknown"), "turns": turn},
+                    "metadata": {"intent": intent, "turns": turn},
                 }
 
             # Execute tool calls and append results
@@ -130,5 +153,5 @@ class AgentExecuteNode:
         return {
             "agent_response": msg.content if msg.content else "Processo concluído após múltiplas consultas.",
             "tool_calls": tool_calls_data,
-            "metadata": {"intent": state.get("intent", "unknown"), "turns": turn, "truncated": True},
+            "metadata": {"intent": intent, "turns": turn, "truncated": True},
         }
