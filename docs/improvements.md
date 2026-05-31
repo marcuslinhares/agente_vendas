@@ -1,7 +1,5 @@
 # Plano de Melhorias — Agente de Vendas
 
-> Checklist de pontos a serem implementados após o MVP completo (P1+P2+P3).
-
 ---
 
 ## 🔴 Críticos (produção)
@@ -19,15 +17,16 @@
 - [ ] **8. Graceful shutdown** — Adicionar handlers `SIGTERM`/`SIGINT` nos consumers de stream (Hono, FastAPI, NestJS) para drenar mensagens pendentes antes de desligar.
 - [ ] **9. Testes automatizados** — Implementar testes de integração do fluxo principal: webhook simulado → stream → agente → persistência no banco.
 - [ ] **10. Health checks robustos** — Expandir `/health` do Hono para verificar MinIO, e do NestJS para verificar PostgreSQL + Redis + MinIO.
+- [ ] **11. OpenRouter como provider alternativo** — Suporte a modelos mais baratos em dev (Claude Haiku, Gemini Flash, Llama via OpenRouter) além da OpenAI.
 
 ## 🟡 Melhorias de DX
 
-- [ ] **11. Hot reload em todos os serviços** — Adicionar volume mounts e `nodemon`/`tsx watch` para Hono e NestJS (FastAPI já tem).
-- [ ] **12. CLI de setup (`make dev`)** — Script que cria `.env` a partir de `.env.example`, instala dependências de todos os apps, roda init.sql, cria buckets MinIO, e sobe tudo com `docker compose up`.
-- [ ] **13. Swagger/OpenAPI no NestJS** — Configurar `@nestjs/swagger` para gerar documentação da API automaticamente.
-- [ ] **14. Migrações de banco** — Configurar TypeORM migrations para versionar o schema ao invés do `init.sql` estático.
-- [ ] **15. BullMQ Dashboard** — Adicionar `@bull-board/nestjs` para visualizar filas, jobs e retries em tempo real.
+- [ ] **12. Hot reload em todos os serviços** — Adicionar volume mounts e `nodemon`/`tsx watch` para Hono e NestJS (FastAPI já tem).
+- [ ] **13. CLI de setup (`make dev`)** — Script que cria `.env` a partir de `.env.example`, instala dependências de todos os apps, roda init.sql, cria buckets MinIO, e sobe tudo com `docker compose up`.
+- [ ] **14. Swagger/OpenAPI no NestJS** — Configurar `@nestjs/swagger` para gerar documentação da API automaticamente.
+- [ ] **15. Migrações de banco** — Configurar TypeORM migrations para versionar o schema ao invés do `init.sql` estático.
+- [ ] **16. BullMQ Dashboard** — Adicionar `@bull-board/nestjs` para visualizar filas, jobs e retries em tempo real.
 
 ---
 
-**Prioridade sugerida:** 1 → 2 → 5 → 6 → 9 → depois os demais.
+**Prioridade sugerida:** 1 → 2 → 11 → 5 → 6 → 9 → depois os demais.
