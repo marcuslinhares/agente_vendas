@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
+import { apiClient } from '@/lib/api-client';
 import {
   LayoutDashboard,
   MessageSquare,
@@ -8,6 +9,8 @@ import {
   Users,
   ShoppingCart,
   Wrench,
+  BarChart3,
+  Megaphone,
   Settings,
   LogOut,
 } from 'lucide-react';
@@ -20,6 +23,8 @@ const navItems = [
   { href: '/customers', label: 'Clientes', icon: Users },
   { href: '/orders', label: 'Pedidos', icon: ShoppingCart },
   { href: '/tools', label: 'Tools', icon: Wrench },
+  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/campaigns', label: 'Campanhas', icon: Megaphone },
   { href: '/settings', label: 'Configurações', icon: Settings },
 ];
 
@@ -32,8 +37,9 @@ export default function DashboardLayout({
   const pathname = usePathname();
 
   function handleLogout() {
-    localStorage.removeItem('token');
-    router.push('/login');
+    apiClient('/auth/logout', { method: 'POST' }).finally(() => {
+      router.push('/login');
+    });
   }
 
   return (
