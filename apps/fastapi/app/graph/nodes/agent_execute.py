@@ -4,13 +4,14 @@ from openai import AsyncOpenAI
 
 from app.graph.state import AgentState
 from app.tools.registry import ToolRegistry
-from app.config import settings
+from app.services.llm import create_llm_client, get_chat_model
 
 
 class AgentExecuteNode:
     def __init__(self):
         self._client: AsyncOpenAI | None = None
         self.tool_registry = ToolRegistry()
+        self.max_turns = 5
 
     def _build_system_prompt(self, state: AgentState) -> str:
         parts = [
@@ -44,9 +45,10 @@ class AgentExecuteNode:
 
     async def run(self, state: AgentState) -> dict:
         if self._client is None:
-            self._client = AsyncOpenAI(api_key=settings.openai_api_key)
+            self._client = create_llm_client()
 
         system_prompt = self._build_system_prompt(state)
+        model = get_chat_model()
 
         # Load available tools
         tools = await self.tool_registry.load_all()
@@ -62,34 +64,59 @@ class AgentExecuteNode:
             for t in tools
         ]
 
-        response = await self._client.chat.completions.create(
-            model=settings.openai_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": state.get("parsed_content") or state.get("raw_content", "")},
-            ],
-            tools=tool_defs if tool_defs else None,
-            temperature=0.7,
-        )
+        # Build messages array starting with system + user message
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": state.get("parsed_content") or state.get("raw_content", "")},
+        ]
 
-        msg = response.choices[0].message
         tool_calls_data = []
+        turn = 0
 
-        # Execute any tool calls
-        if msg.tool_calls:
+        while turn < self.max_turns:
+            turn += 1
+
+            response = await self._client.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=tool_defs if tool_defs else None,
+                temperature=0.7,
+            )
+
+            msg = response.choices[0].message
+
+            # If no tool calls, we're done — use this response
+            if not msg.tool_calls:
+                return {
+                    "agent_response": msg.content or "Desculpe, não consegui processar sua solicitação.",
+                    "tool_calls": tool_calls_data,
+                    "metadata": {"intent": state.get("intent", "unknown"), "turns": turn},
+                }
+
+            # Execute tool calls and append results
+            messages.append(msg)
+
             for tc in msg.tool_calls:
                 tool_calls_data.append({
                     "name": tc.function.name,
                     "arguments": tc.function.arguments,
                 })
-                # Execute tool
-                args = json.loads(tc.function.arguments)
-                result = await self.tool_registry.execute(tc.function.name, args)
-                # Note: in production, tool results would be fed back to LLM
-                # for a proper multi-turn tool loop (future improvement)
 
+                try:
+                    args = json.loads(tc.function.arguments)
+                    result = await self.tool_registry.execute(tc.function.name, args)
+                except Exception as e:
+                    result = f"Error executing {tc.function.name}: {str(e)}"
+
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": str(result)[:2000],
+                })
+
+        # If we hit max turns without a content response, use the last message
         return {
-            "agent_response": msg.content or "Desculpe, não consegui processar sua solicitação.",
+            "agent_response": msg.content if msg.content else "Processo concluído após múltiplas consultas.",
             "tool_calls": tool_calls_data,
-            "metadata": {"intent": state.get("intent", "unknown")},
+            "metadata": {"intent": state.get("intent", "unknown"), "turns": turn, "truncated": True},
         }
