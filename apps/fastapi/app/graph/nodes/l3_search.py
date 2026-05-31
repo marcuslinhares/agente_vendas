@@ -36,9 +36,7 @@ class L3SearchNode:
                     key = "/".join(parts[-2:])
                     image_bytes = download_media(bucket, key)
                     query_embedding_clip = ClipService.embed_image(image_bytes)
-                    print(
-                        f"[l3_search] CLIP embedding: {len(query_embedding_clip)} dims"
-                    )
+                    print(f"[l3_search] CLIP embedding: {len(query_embedding_clip)} dims")
                 except Exception as e:
                     print(f"[l3_search] CLIP error: {e}")
 
