@@ -41,6 +41,32 @@ jobs:
   quality-typescript:
     name: TypeScript Quality (Hono + NestJS + Web)
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: agentevendas
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d agentevendas"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
     strategy:
       matrix:
         app: [hono, nestjs, web]
@@ -64,7 +90,7 @@ jobs:
       - name: 🔴 Tests + Coverage — MUST PASS
         if: matrix.app == 'nestjs'
         run: |
-          npx jest --config jest.config.ts --forceExit --coverage --coverageThreshold='{"global":{"branches":60,"functions":60,"lines":60,"statements":60}}' 2>&1 | tail -20
+          DATABASE_URL=postgresql://app:testpass@localhost:5432/agentevendas REDIS_URL=redis://localhost:6379 npx jest --config jest.config.ts --forceExit --coverage --coverageThreshold='{"global":{"branches":60,"functions":60,"lines":60,"statements":60}}' 2>&1 | tail -20
 
   quality-complexity:
     name: 🔴 Complexity Gates
@@ -97,6 +123,32 @@ jobs:
   quality-dependencies:
     name: 🟡 Dependency Audit
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: agentevendas
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d agentevendas"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
     strategy:
       matrix:
         app: [hono, nestjs, web]
