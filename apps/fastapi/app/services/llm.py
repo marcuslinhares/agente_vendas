@@ -26,7 +26,7 @@ def get_chat_model(intent: str = "") -> str:
     """
     if intent and intent.lower() in SIMPLE_INTENTS:
         if settings.llm_provider == "openrouter":
-            return "openai/gpt-4o-mini"
+            return "deepseek/deepseek-v4-flash"
         return "gpt-4o-mini"
 
     if settings.llm_provider == "openrouter":
@@ -41,5 +41,5 @@ def get_embedding_model() -> str:
 def get_memory_gate_model() -> str:
     """Memory gate is a simple binary decision — use cheapest model."""
     if settings.llm_provider == "openrouter":
-        return "openai/gpt-4o-mini"
+        return "deepseek/deepseek-v4-flash"
     return "gpt-4o-mini"
