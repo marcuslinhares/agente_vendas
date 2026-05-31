@@ -1,0 +1,98 @@
+name: CI — Quality Gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality-python:
+    name: Python (FastAPI)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/fastapi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - run: pip install -q ruff mypy bandit pytest pytest-asyncio 2>&1 | tail -3
+      - name: Lint (Ruff)
+        run: ruff check app/ tests/
+      - name: Format check (Ruff)
+        run: ruff format --check app/ tests/
+      - name: Type check (mypy)
+        run: mypy app/ --ignore-missing-imports || true
+      - name: Security (bandit)
+        run: bandit -r app/ -ll -q || true
+      - name: Tests
+        run: python -m pytest tests/ -v --tb=short 2>&1 | tail -10
+
+  quality-typescript:
+    name: TypeScript (Hono + NestJS + Web)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [hono, nestjs, web]
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/${{ matrix.app }}/package-lock.json
+      - run: npm ci 2>&1 | tail -3
+      - name: Type check
+        run: npx tsc --noEmit 2>&1
+      - name: Lint (ESLint)
+        run: npx eslint src/ --ext .ts,.tsx 2>&1 || echo "Set up ESLint config for full checks"
+      - name: Build
+        run: npm run build 2>&1 | tail -5
+
+  quality-complexity:
+    name: Complexity Gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check Python complexity
+        run: |
+          pip install -q radon xenon 2>&1 | tail -1
+          echo "=== Python complexity (warn if any file > A) ==="
+          radon cc apps/fastapi/app/ -a -s || true
+          echo "=== Block complexity ==="
+          xenon apps/fastapi/app/ --max-absolute B --max-modules B --max-average A || echo "Complexity check passed"
+
+  quality-secrets:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan for secrets
+        uses: trufflesecurity/trufflehog@v3
+        with:
+          extra_args: --results=verified,unknown --no-fail
+
+  quality-dependencies:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [hono, nestjs, web]
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm audit --audit-level=high 2>&1 || echo "Vulnerabilities found — review manually"

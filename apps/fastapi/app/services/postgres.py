@@ -1,10 +1,8 @@
-from typing import Optional
-
 import asyncpg
 
 from app.config import settings
 
-pool: Optional[asyncpg.Pool] = None
+pool: asyncpg.Pool | None = None
 
 
 async def get_pool() -> asyncpg.Pool:
@@ -28,25 +26,22 @@ async def get_last_messages(conversation_id: str, limit: int = 10) -> list[dict]
            WHERE conversation_id = $1
            ORDER BY created_at DESC
            LIMIT $2""",
-        conversation_id, limit
+        conversation_id,
+        limit,
     )
     return [dict(r) for r in rows]
 
 
-async def get_conversation_summary(conversation_id: str) -> Optional[str]:
+async def get_conversation_summary(conversation_id: str) -> str | None:
     p = await get_pool()
-    row = await p.fetchrow(
-        "SELECT summary FROM conversations WHERE id = $1",
-        conversation_id
-    )
+    row = await p.fetchrow("SELECT summary FROM conversations WHERE id = $1", conversation_id)
     return row["summary"] if row else None
 
 
-async def get_conversation_by_whatsapp(whatsapp_id: str) -> Optional[dict]:
+async def get_conversation_by_whatsapp(whatsapp_id: str) -> dict | None:
     p = await get_pool()
     row = await p.fetchrow(
-        "SELECT id, status, message_count FROM conversations WHERE whatsapp_id = $1",
-        whatsapp_id
+        "SELECT id, status, message_count FROM conversations WHERE whatsapp_id = $1", whatsapp_id
     )
     return dict(row) if row else None
 
@@ -57,7 +52,7 @@ async def create_conversation(whatsapp_id: str) -> dict:
         """INSERT INTO conversations (whatsapp_id)
            VALUES ($1)
            RETURNING id, status, message_count""",
-        whatsapp_id
+        whatsapp_id,
     )
     return dict(row)
 
@@ -65,8 +60,8 @@ async def create_conversation(whatsapp_id: str) -> dict:
 async def increment_message_count(conversation_id: str) -> None:
     p = await get_pool()
     await p.execute(
-        "UPDATE conversations SET message_count = message_count + 1, updated_at = NOW() WHERE id = $1",
-        conversation_id
+        "UPDATE conversations SET message_count = message_count + 1, updated_at = NOW() WHERE id = $1",  # noqa: E501
+        conversation_id,
     )
 
 
@@ -86,6 +81,10 @@ async def vector_search(
              AND 1 - (embedding <=> $1::vector) > $4
            ORDER BY score DESC
            LIMIT $5""",
-        embedding, conversation_id, cutoff, threshold, limit
+        embedding,
+        conversation_id,
+        cutoff,
+        threshold,
+        limit,
     )
     return [dict(r) for r in rows]

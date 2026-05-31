@@ -1,12 +1,12 @@
-import json
 import asyncio
-from typing import AsyncIterator, Optional
+import json
+from collections.abc import AsyncIterator
 
 from redis.asyncio import Redis
 
 from app.config import settings
 
-redis_client: Optional[Redis] = None
+redis_client: Redis | None = None
 
 
 async def get_redis() -> Redis:
@@ -36,8 +36,11 @@ async def consume_stream(
     while True:
         try:
             result = await r.xreadgroup(
-                group, consumer, {stream: ">"},
-                count=batch_size, block=block,
+                group,
+                consumer,
+                {stream: ">"},
+                count=batch_size,
+                block=block,
             )
             if not result:
                 await asyncio.sleep(0.1)

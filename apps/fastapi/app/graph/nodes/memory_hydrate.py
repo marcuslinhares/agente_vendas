@@ -1,5 +1,5 @@
 from app.graph.state import AgentState
-from app.services.postgres import get_last_messages, get_conversation_summary
+from app.services.postgres import get_conversation_summary, get_last_messages
 
 
 class MemoryHydrateNode:

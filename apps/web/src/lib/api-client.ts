@@ -14,23 +14,23 @@ export async function apiClient<T = any>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
-  let token: string | null = null;
-  if (typeof window !== 'undefined') {
-    token = localStorage.getItem('token');
-  }
-
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
 
   const res = await fetch(url, {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
     const body = await res.json().catch(() => ({ message: res.statusText }));
     throw new ApiError(body.message || `HTTP ${res.status}`, res.status);
   }

@@ -16,7 +16,9 @@ async def _create_order(params: dict) -> str:
         params.get("total", 0),
         params.get("payment_method", "pending"),
     )
-    return f"Pedido #{row['id']} criado! Total: R$ {float(row['total']):.2f}. Status: {row['status']}"
+    return (
+        f"Pedido #{row['id']} criado! Total: R$ {float(row['total']):.2f}. Status: {row['status']}"
+    )
 
 
 async def _get_order_status(params: dict) -> str:
@@ -29,40 +31,44 @@ async def _get_order_status(params: dict) -> str:
     )
     if not row:
         return "Pedido não encontrado."
-    return f"Status: {row['status']}. Total: R$ {float(row['total']):.2f}. Criado em: {row['created_at']}"
+    return f"Status: {row["status"]}. Total: R$ {float(row["total"]):.2f}. Em: {row["created_at"]}"
 
 
 def register_orders_tools(registry: ToolRegistry) -> None:
-    registry.register_core(ToolDef(
-        name="create_order",
-        description="Create a new order for a customer with items and payment method",
-        parameters={
-            "type": "object",
-            "properties": {
-                "customer_id": {"type": "string", "description": "Customer ID"},
-                "items": {
-                    "type": "array",
-                    "items": {"type": "object"},
-                    "description": "List of items with product_id and quantity",
+    registry.register_core(
+        ToolDef(
+            name="create_order",
+            description="Create a new order for a customer with items and payment method",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "customer_id": {"type": "string", "description": "Customer ID"},
+                    "items": {
+                        "type": "array",
+                        "items": {"type": "object"},
+                        "description": "List of items with product_id and quantity",
+                    },
+                    "total": {"type": "number", "description": "Order total value"},
+                    "payment_method": {"type": "string", "description": "Payment method"},
                 },
-                "total": {"type": "number", "description": "Order total value"},
-                "payment_method": {"type": "string", "description": "Payment method"},
+                "required": ["customer_id", "items", "total"],
             },
-            "required": ["customer_id", "items", "total"],
-        },
-        is_idempotent=False,
-        execute=_create_order,
-    ))
-    registry.register_core(ToolDef(
-        name="get_order_status",
-        description="Check the current status of an order by its ID",
-        parameters={
-            "type": "object",
-            "properties": {
-                "order_id": {"type": "string", "format": "uuid", "description": "Order ID"},
+            is_idempotent=False,
+            execute=_create_order,
+        )
+    )
+    registry.register_core(
+        ToolDef(
+            name="get_order_status",
+            description="Check the current status of an order by its ID",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "order_id": {"type": "string", "format": "uuid", "description": "Order ID"},
+                },
+                "required": ["order_id"],
             },
-            "required": ["order_id"],
-        },
-        is_idempotent=True,
-        execute=_get_order_status,
-    ))
+            is_idempotent=True,
+            execute=_get_order_status,
+        )
+    )

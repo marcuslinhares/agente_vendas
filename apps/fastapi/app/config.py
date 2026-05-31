@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # MinIO
     minio_endpoint: str = "localhost:9000"
     minio_access_key: str = "minioadmin"
-    minio_secret_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"  # noqa: S105
 
     # OpenAI
     openai_api_key: str = ""
@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     stream_outbox: str = "whatsapp:outbox"
     stream_persist: str = "message:persist"
     consumer_group: str = "fastapi-workers"
+
+    # Multi-tenancy
+    enable_multitenancy: bool = False
+    default_tenant_id: str = "default"
 
     class Config:
         env_file = ".env"

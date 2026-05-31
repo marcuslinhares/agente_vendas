@@ -1,6 +1,7 @@
 """Unified LLM client with model routing by task complexity."""
 
 from openai import AsyncOpenAI
+
 from app.config import settings
 
 # Simple intents that don't need a powerful model

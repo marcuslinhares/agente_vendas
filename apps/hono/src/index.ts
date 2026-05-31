@@ -49,7 +49,16 @@ if (!process.env.EVOLUTION_API_URL) {
   process.exit(1);
 }
 
-serve({ fetch: app.fetch, port: PORT }, () => {
+const server = serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`✅ Hono server running on port ${PORT}`);
   startOutboxConsumer().catch(console.error);
 });
+
+// Graceful shutdown
+const shutdown = async (signal: string) => {
+  console.log(`[hono] Received ${signal}, shutting down gracefully...`);
+  server.close();
+  process.exit(0);
+};
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

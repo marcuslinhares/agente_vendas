@@ -1,18 +1,18 @@
 from app.graph.state import AgentState
+from app.services.llm import create_llm_client, get_embedding_model
 from app.services.minio import download_media
-from app.config import settings
 
 
 class ClipService:
     """Singleton CLIP model for image embeddings."""
+
     _instance = None
 
     @classmethod
     def get_instance(cls) -> dict:
         if cls._instance is None:
-            import pillow_avif  # noqa: F401 — ensures AVIF support
             import open_clip
-            import torch
+            import pillow_avif  # noqa: F401 — ensures AVIF support
 
             model, _, preprocess = open_clip.create_model_and_transforms(
                 "ViT-B-32", pretrained="laion2b_s34b_b79k"
@@ -27,6 +27,7 @@ class ClipService:
     @classmethod
     def embed_image(cls, image_bytes: bytes) -> list[float]:
         import io
+
         import torch
         from PIL import Image
 
@@ -43,13 +44,11 @@ class PostProcessNode:
         self._text_embedder = None
 
     async def _get_text_embedding(self, text: str) -> list[float]:
-        from openai import AsyncOpenAI
-
         if self._text_embedder is None:
-            self._text_embedder = AsyncOpenAI(api_key=settings.openai_api_key)
+            self._text_embedder = create_llm_client()
 
         response = await self._text_embedder.embeddings.create(
-            model=settings.openai_embedding_model,
+            model=get_embedding_model(),
             input=text,
         )
         return response.data[0].embedding
@@ -57,6 +56,10 @@ class PostProcessNode:
     async def run(self, state: AgentState) -> dict:
         embedding_clip = None
         embedding_text = None
+
+        # TTS if response should be sent as audio (optional, controlled by intent)
+        # In a future version, we could decide per-intent whether to use TTS
+        # For now, the infrastructure is ready — actual usage is opt-in
 
         # CLIP embedding for image media
         if state.get("media_url") and state.get("media_type") == "image":

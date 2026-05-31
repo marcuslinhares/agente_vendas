@@ -4,11 +4,11 @@ import json
 from openai import AsyncOpenAI
 
 from app.graph.state import AgentState
-from app.tools.registry import ToolRegistry
 from app.services.llm import create_llm_client, get_chat_model
+from app.tools.registry import ToolRegistry
 
 
-class AgentExecuteNode:
+class SalesAgentNode:
     def __init__(self):
         self._client: AsyncOpenAI | None = None
         self.tool_registry = ToolRegistry()
@@ -64,7 +64,7 @@ class AgentExecuteNode:
 
             cached = await get_cached_response(user_msg)
             if cached:
-                print(f"[agent_execute] Cache hit for '{intent}' intent")
+                print(f"[sales_agent] Cache hit for '{intent}' intent")
                 return {
                     "agent_response": cached,
                     "tool_calls": [],
@@ -90,7 +90,10 @@ class AgentExecuteNode:
         # Build messages array starting with system + user message
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": state.get("parsed_content") or state.get("raw_content", "")},
+            {
+                "role": "user",
+                "content": state.get("parsed_content") or state.get("raw_content", ""),
+            },
         ]
 
         tool_calls_data = []
@@ -117,7 +120,8 @@ class AgentExecuteNode:
                     await set_cached_response(user_msg, msg.content)
 
                 return {
-                    "agent_response": msg.content or "Desculpe, não consegui processar sua solicitação.",
+                    "agent_response": msg.content
+                    or "Desculpe, não consegui processar sua solicitação.",
                     "tool_calls": tool_calls_data,
                     "metadata": {"intent": intent, "turns": turn},
                 }
@@ -127,10 +131,12 @@ class AgentExecuteNode:
 
             # Execute all tool calls in parallel
             async def execute_tool(tc: any) -> dict:
-                tool_calls_data.append({
-                    "name": tc.function.name,
-                    "arguments": tc.function.arguments,
-                })
+                tool_calls_data.append(
+                    {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    }
+                )
 
                 try:
                     args = json.loads(tc.function.arguments)
@@ -144,14 +150,14 @@ class AgentExecuteNode:
                     "content": str(result)[:2000],
                 }
 
-            results = await asyncio.gather(
-                *[execute_tool(tc) for tc in msg.tool_calls]
-            )
+            results = await asyncio.gather(*[execute_tool(tc) for tc in msg.tool_calls])
             messages.extend(results)
 
         # If we hit max turns without a content response, use the last message
         return {
-            "agent_response": msg.content if msg.content else "Processo concluído após múltiplas consultas.",
+            "agent_response": msg.content
+            if msg.content
+            else "Processo concluído após múltiplas consultas.",
             "tool_calls": tool_calls_data,
             "metadata": {"intent": intent, "turns": turn, "truncated": True},
         }

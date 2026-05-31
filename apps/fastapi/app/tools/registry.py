@@ -1,7 +1,7 @@
 import json
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Callable, Awaitable
 
 import httpx
 

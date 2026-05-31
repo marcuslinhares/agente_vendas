@@ -16,28 +16,36 @@ async def _get_products(params: dict) -> str:
             "SELECT name, description, price, category, stock, image_url "
             "FROM products WHERE category = $1 AND name ILIKE $2 AND is_active = true "
             "ORDER BY name LIMIT $3 OFFSET $4",
-            category, f"%{search}%", limit, offset,
+            category,
+            f"%{search}%",
+            limit,
+            offset,
         )
     elif category:
         rows = await pool.fetch(
             "SELECT name, description, price, category, stock, image_url "
             "FROM products WHERE category = $1 AND is_active = true "
             "ORDER BY name LIMIT $2 OFFSET $3",
-            category, limit, offset,
+            category,
+            limit,
+            offset,
         )
     elif search:
         rows = await pool.fetch(
             "SELECT name, description, price, category, stock, image_url "
             "FROM products WHERE name ILIKE $1 AND is_active = true "
             "ORDER BY name LIMIT $2 OFFSET $3",
-            f"%{search}%", limit, offset,
+            f"%{search}%",
+            limit,
+            offset,
         )
     else:
         rows = await pool.fetch(
             "SELECT name, description, price, category, stock, image_url "
             "FROM products WHERE is_active = true "
             "ORDER BY name LIMIT $1 OFFSET $2",
-            limit, offset,
+            limit,
+            offset,
         )
 
     if not rows:
@@ -66,31 +74,35 @@ async def _check_stock(params: dict) -> str:
 
 
 def register_products_tools(registry: ToolRegistry) -> None:
-    registry.register_core(ToolDef(
-        name="get_products",
-        description="List products available in the catalog with optional filters by category or search term",
-        parameters={
-            "type": "object",
-            "properties": {
-                "category": {"type": "string", "description": "Product category filter"},
-                "search": {"type": "string", "description": "Search term in product name"},
-                "page": {"type": "integer", "default": 1},
-                "limit": {"type": "integer", "default": 10},
+    registry.register_core(
+        ToolDef(
+            name="get_products",
+            description="List products with optional category/search filters",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "category": {"type": "string", "description": "Product category filter"},
+                    "search": {"type": "string", "description": "Search term in product name"},
+                    "page": {"type": "integer", "default": 1},
+                    "limit": {"type": "integer", "default": 10},
+                },
             },
-        },
-        is_idempotent=True,
-        execute=_get_products,
-    ))
-    registry.register_core(ToolDef(
-        name="check_stock",
-        description="Check stock availability for a specific product by its ID",
-        parameters={
-            "type": "object",
-            "properties": {
-                "product_id": {"type": "string", "format": "uuid", "description": "Product ID"},
+            is_idempotent=True,
+            execute=_get_products,
+        )
+    )
+    registry.register_core(
+        ToolDef(
+            name="check_stock",
+            description="Check stock availability for a specific product by its ID",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "product_id": {"type": "string", "format": "uuid", "description": "Product ID"},
+                },
+                "required": ["product_id"],
             },
-            "required": ["product_id"],
-        },
-        is_idempotent=True,
-        execute=_check_stock,
-    ))
+            is_idempotent=True,
+            execute=_check_stock,
+        )
+    )

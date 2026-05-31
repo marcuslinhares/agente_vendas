@@ -2,11 +2,11 @@ import base64
 
 from openai import AsyncOpenAI
 
-from app.graph.state import AgentState
-from app.services.postgres import get_conversation_by_whatsapp, create_conversation
-from app.services.minio import download_media
 from app.config import settings
+from app.graph.state import AgentState
 from app.services.llm import create_llm_client, get_chat_model
+from app.services.minio import download_media
+from app.services.postgres import create_conversation, get_conversation_by_whatsapp
 
 
 class ParseClassifyNode:
@@ -15,6 +15,15 @@ class ParseClassifyNode:
 
     async def run(self, state: AgentState) -> dict:
         whatsapp_id = state["whatsapp_id"]
+
+        # Tenant resolution (when multitenancy is enabled)
+        tenant_id = settings.default_tenant_id
+        if settings.enable_multitenancy:
+            # Simple tenant mapping by WhatsApp prefix
+            # In production, this could use a webhook header or subdomain
+            # For now, tenant_id is passed through the stream payload
+            tenant_id = state.get("tenant_id", settings.default_tenant_id)
+            print(f"[parse_classify] Tenant: {tenant_id}")
 
         # Get or create conversation
         conv = await get_conversation_by_whatsapp(whatsapp_id)
@@ -48,8 +57,8 @@ class ParseClassifyNode:
                                 {
                                     "type": "text",
                                     "text": "Descreva esta imagem em detalhes em português. "
-                                            "Se for um produto, identifique cor, modelo, material, "
-                                            "e qualquer característica visível.",
+                                    "Se for um produto, identifique cor, modelo, material, "
+                                    "e qualquer característica visível.",
                                 },
                                 {
                                     "type": "image_url",
@@ -72,6 +81,28 @@ class ParseClassifyNode:
                 print(f"[parse_classify] Vision error: {e}")
                 # Fallback to placeholder
                 parsed = f"[Imagem enviada pelo cliente: {state['raw_content'] or 'sem legenda'}]"
+
+        # If audio, transcribe with Whisper
+        if state.get("media_url") and state.get("media_type") == "audio":
+            try:
+                url_path = state["media_url"]
+                parts = url_path.split("/")
+                bucket = parts[-2] if len(parts) >= 2 else "conversations-media"
+                key = "/".join(parts[-2:])
+                audio_bytes = download_media(bucket, key)
+
+                from app.services.voice import VoiceService
+
+                voice = VoiceService()
+                transcript = await voice.transcribe(audio_bytes)
+                parsed = f"[Áudio transcrito: {transcript}]"
+                print(f"[parse_classify] Audio transcribed ({len(transcript)} chars)")
+
+            except Exception as e:
+                print(f"[parse_classify] Transcription error: {e}")
+                parsed = (
+                    f"[Áudio enviado pelo cliente: {state['raw_content'] or 'sem transcrição'}]"
+                )
 
         # Simple intent classification
         intent = "duvida"

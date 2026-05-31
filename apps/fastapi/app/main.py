@@ -1,20 +1,21 @@
 import asyncio
-import ulid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
+import ulid
 from fastapi import FastAPI
 
 from app.config import settings
-from app.services.redis import (
-    ensure_consumer_group,
-    consume_stream,
-    publish_to_stream,
-    ack_message,
-)
 from app.graph.agent import build_agent
-from app.tools.registry import ToolRegistry
-from app.tools.core import register_all_core_tools
+from app.services.minio import get_minio
 from app.services.postgres import get_pool, increment_message_count
+from app.services.redis import (
+    ack_message,
+    consume_stream,
+    ensure_consumer_group,
+    publish_to_stream,
+)
+from app.tools.core import register_all_core_tools
+from app.tools.registry import ToolRegistry
 
 # Global instances
 agent = None  # type: ignore
@@ -38,10 +39,8 @@ async def lifespan(app: FastAPI):
     yield
 
     task.cancel()
-    try:
+    with suppress(asyncio.CancelledError):
         await task
-    except asyncio.CancelledError:
-        pass
 
 
 app = FastAPI(lifespan=lifespan, title="Agente de Vendas - LangGraph")
@@ -58,33 +57,40 @@ async def stream_consumer():
     ):
         try:
             # Run agent
-            state = await agent.ainvoke({
-                "whatsapp_id": payload.get("whatsapp_id", ""),
-                "conversation_id": payload.get("conversation_id", ""),
-                "message_id": payload.get("id", ulid.new().str),
-                "raw_content": payload.get("message", ""),
-                "media_url": payload.get("media_url"),
-                "media_type": payload.get("media_type"),
-                "parsed_content": "",
-                "intent": "",
-                "customer_id": None,
-                "l1_messages": [],
-                "l2_summary": "",
-                "l3_memories": [],
-                "l3_triggered": False,
-                "agent_response": "",
-                "tool_calls": [],
-                "metadata": {},
-                "embedding_clip": None,
-                "embedding_text": None,
-            })
+            state = await agent.ainvoke(
+                {
+                    "tenant_id": payload.get("tenant_id", settings.default_tenant_id),
+                    "whatsapp_id": payload.get("whatsapp_id", ""),
+                    "conversation_id": payload.get("conversation_id", ""),
+                    "message_id": payload.get("id", ulid.new().str),
+                    "raw_content": payload.get("message", ""),
+                    "media_url": payload.get("media_url"),
+                    "media_type": payload.get("media_type"),
+                    "parsed_content": "",
+                    "intent": "",
+                    "customer_id": None,
+                    "l1_messages": [],
+                    "l2_summary": "",
+                    "l3_memories": [],
+                    "l3_triggered": False,
+                    "selected_agent": "sales_agent",
+                    "agent_response": "",
+                    "tool_calls": [],
+                    "metadata": {},
+                    "embedding_clip": None,
+                    "embedding_text": None,
+                }
+            )
 
             # Publish response to outbox (Hono will send via Evolution API)
-            await publish_to_stream(settings.stream_outbox, {
-                "id": ulid.new().str,
-                "to": payload["whatsapp_id"],
-                "text": state.get("agent_response", ""),
-            })
+            await publish_to_stream(
+                settings.stream_outbox,
+                {
+                    "id": ulid.new().str,
+                    "to": payload["whatsapp_id"],
+                    "text": state.get("agent_response", ""),
+                },
+            )
 
             # Publish to persist stream (NestJS will save to database)
             persist_payload = {
@@ -112,7 +118,27 @@ async def stream_consumer():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "fastapi-langgraph"}
+    deps = {"status": "ok", "service": "fastapi-langgraph"}
+    try:
+        pool = await get_pool()
+        await pool.fetchval("SELECT 1")
+        deps["postgres"] = "ok"
+    except Exception as e:
+        deps["postgres"] = f"error: {e}"
+    try:
+        from app.services.redis import get_redis
+
+        r = await get_redis()
+        await r.ping()
+        deps["redis"] = "ok"
+    except Exception as e:
+        deps["redis"] = f"error: {e}"
+    try:
+        get_minio().list_buckets()
+        deps["minio"] = "ok"
+    except Exception as e:
+        deps["minio"] = f"error: {e}"
+    return deps
 
 
 @app.get("/ready")

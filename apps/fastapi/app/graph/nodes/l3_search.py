@@ -1,11 +1,10 @@
 from openai import AsyncOpenAI
 
-from app.graph.state import AgentState
-from app.services.postgres import vector_search
-from app.services.minio import download_media
 from app.graph.nodes.post_process import ClipService
-from app.services.llm import create_llm_client, get_chat_model, get_embedding_model
-from app.config import settings
+from app.graph.state import AgentState
+from app.services.llm import create_llm_client, get_embedding_model
+from app.services.minio import download_media
+from app.services.postgres import vector_search
 
 
 class L3SearchNode:
@@ -37,7 +36,9 @@ class L3SearchNode:
                     key = "/".join(parts[-2:])
                     image_bytes = download_media(bucket, key)
                     query_embedding_clip = ClipService.embed_image(image_bytes)
-                    print(f"[l3_search] CLIP query embedding generated ({len(query_embedding_clip)} dims)")
+                    print(
+                        f"[l3_search] CLIP embedding: {len(query_embedding_clip)} dims"
+                    )
                 except Exception as e:
                     print(f"[l3_search] CLIP error: {e}")
 
@@ -73,7 +74,9 @@ class L3SearchNode:
                          AND 1 - (embedding_clip <=> $1::vector) > 0.80
                        ORDER BY score DESC
                        LIMIT 5""",
-                    query_embedding_clip, state["conversation_id"], cutoff,
+                    query_embedding_clip,
+                    state["conversation_id"],
+                    cutoff,
                 )
                 clip_memories = [dict(r) for r in rows]
                 memories.extend(clip_memories)

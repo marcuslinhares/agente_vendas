@@ -1,11 +1,9 @@
-from typing import Optional
-
 import boto3
 from botocore.config import Config
 
 from app.config import settings
 
-client: Optional[boto3.client] = None
+client: boto3.client | None = None
 
 
 def get_minio() -> boto3.client:

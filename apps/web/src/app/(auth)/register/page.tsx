@@ -21,11 +21,10 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const { accessToken } = await apiClient<{ accessToken: string }>('/auth/register', {
+      await apiClient<{ ok: boolean }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ email, password, name }),
       });
-      localStorage.setItem('token', accessToken);
       router.push('/');
     } catch (err) {
       if (err instanceof ApiError) {

@@ -20,11 +20,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { accessToken } = await apiClient<{ accessToken: string }>('/auth/login', {
+      await apiClient<{ ok: boolean }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
-      localStorage.setItem('token', accessToken);
       router.push('/');
     } catch (err) {
       if (err instanceof ApiError) {

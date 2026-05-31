@@ -2,8 +2,8 @@ import json
 
 from openai import AsyncOpenAI
 
-from app.graph.state import AgentState
 from app.config import settings
+from app.graph.state import AgentState
 from app.services.llm import create_llm_client, get_memory_gate_model
 
 
@@ -21,11 +21,11 @@ class MemoryGateNode:
         )
 
         prompt = (
-            f'Analyze this user message in a sales conversation.\n\n'
+            f"Analyze this user message in a sales conversation.\n\n"
             f'User message: "{user_msg}"\n\n'
-            f'Recent messages:\n{messages_text}\n\n'
-            f'Does the user\'s message reference something said earlier in the conversation '
-            f'(more than 20 messages ago or in a previous session)?\n'
+            f"Recent messages:\n{messages_text}\n\n"
+            f"Does the user's message reference something said earlier in the conversation "
+            f"(more than 20 messages ago or in a previous session)?\n"
             f'Respond ONLY with JSON: {{"trigger_l3": true/false, "reason": "..."}}'
         )
 

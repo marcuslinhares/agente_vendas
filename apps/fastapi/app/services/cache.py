@@ -1,7 +1,6 @@
 """Semantic cache for LLM responses using Redis + embeddings."""
 
 import hashlib
-from typing import Optional
 
 
 async def _get_redis():
@@ -12,10 +11,10 @@ async def _get_redis():
 
 def _simple_hash(text: str) -> str:
     """Fast hash for exact-match cache lookup."""
-    return hashlib.md5(text.encode()).hexdigest()
+    return hashlib.md5(text.encode()).hexdigest()  # noqa: S324
 
 
-async def get_cached_response(user_message: str) -> Optional[str]:
+async def get_cached_response(user_message: str) -> str | None:
     """
     Check semantic cache for a similar question.
     Returns cached response if found, None otherwise.
@@ -38,9 +37,7 @@ async def get_cached_response(user_message: str) -> Optional[str]:
     return None
 
 
-async def set_cached_response(
-    user_message: str, response: str, ttl: int = 3600
-) -> None:
+async def set_cached_response(user_message: str, response: str, ttl: int = 3600) -> None:
     """Cache a response for future similar questions."""
     if not user_message or not response:
         return

@@ -7,6 +7,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- Customers
 CREATE TABLE IF NOT EXISTS customers (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       TEXT NOT NULL DEFAULT 'default',
     whatsapp_id     TEXT UNIQUE NOT NULL,
     name            VARCHAR(200),
     email           VARCHAR(200),
@@ -24,6 +25,7 @@ CREATE TABLE IF NOT EXISTS customers (
 -- Products
 CREATE TABLE IF NOT EXISTS products (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       TEXT NOT NULL DEFAULT 'default',
     name            VARCHAR(200) NOT NULL,
     description     TEXT,
     price           DECIMAL(10,2) NOT NULL CHECK (price >= 0),
@@ -38,6 +40,7 @@ CREATE TABLE IF NOT EXISTS products (
 -- Dynamic tools catalog
 CREATE TABLE IF NOT EXISTS tools_catalog (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       TEXT NOT NULL DEFAULT 'default',
     name            VARCHAR(100) NOT NULL UNIQUE,
     description     TEXT NOT NULL,
     schema          JSONB NOT NULL DEFAULT '{}',
@@ -56,6 +59,7 @@ CREATE TABLE IF NOT EXISTS tools_catalog (
 -- CRM users
 CREATE TABLE IF NOT EXISTS users (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       TEXT NOT NULL DEFAULT 'default',
     email           VARCHAR(255) UNIQUE NOT NULL,
     password_hash   VARCHAR(255) NOT NULL,
     name            VARCHAR(200),
@@ -66,6 +70,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- Conversations
 CREATE TABLE IF NOT EXISTS conversations (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       TEXT NOT NULL DEFAULT 'default',
     whatsapp_id     TEXT NOT NULL UNIQUE,
     customer_id     UUID REFERENCES customers(id) ON DELETE SET NULL,
     status          VARCHAR(20) DEFAULT 'active'
@@ -81,6 +86,7 @@ CREATE TABLE IF NOT EXISTS conversations (
 -- Messages
 CREATE TABLE IF NOT EXISTS messages (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       TEXT NOT NULL DEFAULT 'default',
     message_id      TEXT UNIQUE NOT NULL,
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     role            VARCHAR(10) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
@@ -95,6 +101,7 @@ CREATE TABLE IF NOT EXISTS messages (
 -- Orders
 CREATE TABLE IF NOT EXISTS orders (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       TEXT NOT NULL DEFAULT 'default',
     customer_id     UUID NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
     conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
     items           JSONB NOT NULL DEFAULT '[]',
@@ -108,6 +115,7 @@ CREATE TABLE IF NOT EXISTS orders (
 -- Message embeddings (L3 memory + vector search)
 CREATE TABLE IF NOT EXISTS message_embeddings (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       TEXT NOT NULL DEFAULT 'default',
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     message_id      UUID REFERENCES messages(id) ON DELETE SET NULL,
     content         TEXT,
@@ -121,6 +129,7 @@ CREATE TABLE IF NOT EXISTS message_embeddings (
 -- Product embeddings (RAG catalog)
 CREATE TABLE IF NOT EXISTS product_embeddings (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       TEXT NOT NULL DEFAULT 'default',
     product_id      UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     content         TEXT,
     media_url       TEXT,
@@ -132,6 +141,7 @@ CREATE TABLE IF NOT EXISTS product_embeddings (
 -- Tool execution log
 CREATE TABLE IF NOT EXISTS tool_execution_log (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       TEXT NOT NULL DEFAULT 'default',
     tool_name       VARCHAR(100) NOT NULL,
     conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
     parameters      JSONB DEFAULT '{}',
@@ -169,3 +179,8 @@ CREATE INDEX IF NOT EXISTS idx_embeddings_conv_created ON message_embeddings(con
 CREATE INDEX IF NOT EXISTS idx_tools_active ON tools_catalog(is_active) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_tool_log_created ON tool_execution_log(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tool_log_conv ON tool_execution_log(conversation_id);
+
+-- Multi-tenancy indexes
+CREATE INDEX IF NOT EXISTS idx_conversations_tenant ON conversations(tenant_id, whatsapp_id);
+CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers(tenant_id, whatsapp_id);
+CREATE INDEX IF NOT EXISTS idx_messages_tenant ON messages(tenant_id, conversation_id);

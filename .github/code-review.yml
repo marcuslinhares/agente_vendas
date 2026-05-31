@@ -1,0 +1,14 @@
+name: Code Review Checklist
+description: PR must pass all quality gates before merge
+title: "feat: "
+body:
+  - type: checkboxes
+    attributes:
+      label: Quality Gates
+      options:
+        - label: CI passes (lint, type check, tests, build)
+        - label: No new TODOs or FIXMEs added
+        - label: Test coverage maintained or improved
+        - label: No secrets or credentials in code
+        - label: Complexity within thresholds
+        - label: Documentation updated if needed
