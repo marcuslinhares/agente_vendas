@@ -1,6 +1,6 @@
 """Unit tests for ParseClassifyNode."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -236,6 +236,59 @@ async def test_parse_classify_detects_thanks():
             result = await node.run(state)
 
             assert result["intent"] == "agradecimento"
+
+
+@pytest.mark.asyncio
+async def test_parse_classify_describes_image_success():
+    """Should download image and describe via Vision API."""
+    node = ParseClassifyNode()
+
+    mock_llm_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = "Uma camiseta vermelha de algodão."
+
+    mock_create = AsyncMock(return_value=mock_response)
+    mock_llm_client.chat.completions.create = mock_create
+
+    with patch("app.graph.nodes.parse_classify.download_media") as mock_download:
+        mock_download.return_value = b"fake-image-bytes"
+
+        with patch("app.graph.nodes.parse_classify.create_llm_client") as mock_create_llm:
+            mock_create_llm.return_value = mock_llm_client
+
+            with patch("app.graph.nodes.parse_classify.get_chat_model") as mock_get_model:
+                mock_get_model.return_value = "gpt-4o"
+
+                result = await node._describe_image(
+                    "http://minio/conversations-media/image.jpg", "Olha essa camiseta"
+                )
+
+                assert result == "Uma camiseta vermelha de algodão."
+
+                mock_download.assert_called_once_with(
+                    "conversations-media", "conversations-media/image.jpg"
+                )
+                mock_create_llm.assert_called_once()
+                mock_create.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_parse_classify_describes_image_fallback():
+    """Should handle Vision API errors gracefully and return fallback string."""
+    node = ParseClassifyNode()
+
+    with patch("app.graph.nodes.parse_classify.download_media") as mock_download:
+        mock_download.side_effect = Exception("MinIO offline")
+
+        result = await node._describe_image(
+            "http://minio/conversations-media/image.jpg", "Olha essa camiseta"
+        )
+
+        assert result == "[Imagem enviada pelo cliente: Olha essa camiseta]"
+        mock_download.assert_called_once_with(
+            "conversations-media", "conversations-media/image.jpg"
+        )
 
 
 @pytest.mark.asyncio
