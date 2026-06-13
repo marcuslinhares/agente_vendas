@@ -22,13 +22,12 @@ const classLabels: Record<string, string> = {
   cliente: '⭐ Cliente',
 };
 
-const NEXT_CLASSIFICATION: Record<string, string> = {
+const nextClassification: Record<string, string> = {
   lead_frio: 'lead_morno',
   lead_morno: 'lead_quente',
   lead_quente: 'cliente',
   cliente: 'lead_frio',
 };
-
 
 export default function CustomersPage() {
   const queryClient = useQueryClient();
@@ -54,7 +53,7 @@ export default function CustomersPage() {
   );
 
   function cycleClassification(customer: any) {
-    const next = NEXT_CLASSIFICATION[customer.classification] || 'lead_frio';
+    const next = nextClassification[customer.classification] || 'lead_frio';
     classifyMutation.mutate({ conversationId: customer.id, classification: next });
   }
 
