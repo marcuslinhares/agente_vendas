@@ -55,8 +55,7 @@ const server = serve({ fetch: app.fetch, port: PORT }, () => {
 });
 
 // Graceful shutdown
-const shutdown = async (signal: string) => {
-  console.log(`[hono] Received ${signal}, shutting down gracefully...`);
+const shutdown = async (_signal: string) => {
   server.close();
   process.exit(0);
 };
