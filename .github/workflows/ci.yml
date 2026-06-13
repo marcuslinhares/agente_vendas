@@ -82,7 +82,7 @@ jobs:
           cache-dependency-path: apps/${{ matrix.app }}/package-lock.json
       - run: npm ci 2>&1 | tail -3
       - name: 🔴 TypeScript compile — MUST PASS
-        run: npx tsc --noEmit 2>&1
+        run: npx -p typescript tsc --noEmit 2>&1
       - name: 🔴 Lint (ESLint) — MUST PASS
         run: npx eslint src/ --ext .ts,.tsx 2>&1
       - name: 🔴 Build — MUST PASS
