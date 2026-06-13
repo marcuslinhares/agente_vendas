@@ -1,4 +1,5 @@
 import json
+import logging
 
 from openai import AsyncOpenAI
 
@@ -6,6 +7,7 @@ from app.config import settings
 from app.graph.state import AgentState
 from app.services.llm import create_llm_client, get_memory_gate_model
 
+logger = logging.getLogger(__name__)
 
 class MemoryGateNode:
     def __init__(self):
@@ -40,7 +42,7 @@ class MemoryGateNode:
 
     async def run(self, state: AgentState) -> dict:
         if not settings.openai_api_key and not settings.openrouter_api_key:
-            print("[memory_gate] No LLM API key configured — skipping gate")
+            logger.warning("[memory_gate] No LLM API key configured — skipping gate")
             return {"l3_triggered": False}
 
         try:
@@ -50,8 +52,8 @@ class MemoryGateNode:
             )
             triggered = result.get("trigger_l3", False)
             if triggered:
-                print(f"[memory_gate] L3 triggered: {result.get('reason', '')}")
+                logger.info(f"[memory_gate] L3 triggered: {result.get('reason', '')}")
             return {"l3_triggered": triggered}
         except Exception as e:
-            print(f"[memory_gate] LLM error: {e}")
+            logger.error(f"[memory_gate] LLM error: {e}")
             return {"l3_triggered": False}
