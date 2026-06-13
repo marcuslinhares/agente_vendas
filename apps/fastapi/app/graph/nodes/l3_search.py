@@ -88,16 +88,12 @@ class L3SearchNode:
         # - Both: search by both and merge results
 
         if media_url and state.get("media_type") == "image":
-            clip_results = await self._search_by_clip(
-                media_url, state["conversation_id"], cutoff
-            )
+            clip_results = await self._search_by_clip(media_url, state["conversation_id"], cutoff)
             memories.extend(clip_results)
             logger.info(f"[l3_search] CLIP search returned {len(clip_results)} results")
 
         if query_text:
-            text_results = await self._search_by_text(
-                query_text, state["conversation_id"], cutoff
-            )
+            text_results = await self._search_by_text(query_text, state["conversation_id"], cutoff)
             memories.extend(text_results)
 
         # Deduplicate by removing exact content duplicates
