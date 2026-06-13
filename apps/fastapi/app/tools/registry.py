@@ -56,7 +56,7 @@ class ToolRegistry:
                 tools.append(tool)
             return tools
         except Exception as e:
-            logger.error(f"DB load error: {e}")
+            logger.error(f"[registry] DB load error: {e}")
             return []
 
     def _make_http_executor(
@@ -134,6 +134,6 @@ class ToolRegistry:
                     error_msg,
                 )
             except Exception as log_err:
-                logger.error(f"Failed to log tool execution: {log_err}")
+                logger.error(f"[registry] Failed to log tool execution: {log_err}")
 
         return result
