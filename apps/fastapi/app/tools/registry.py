@@ -1,9 +1,12 @@
 import json
+import logging
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -19,9 +22,11 @@ class ToolRegistry:
     def __init__(self) -> None:
         self._core_tools: list[ToolDef] = []
         self._dynamic_tools: list[ToolDef] = []
+        self._tools_by_name: dict[str, ToolDef] = {}
 
     def register_core(self, tool: ToolDef) -> None:
         self._core_tools.append(tool)
+        self._tools_by_name[tool.name] = tool
 
     async def _load_dynamic_from_db(self) -> list[ToolDef]:
         from app.services.postgres import get_pool
@@ -51,7 +56,7 @@ class ToolRegistry:
                 tools.append(tool)
             return tools
         except Exception as e:
-            print(f"[registry] DB load error: {e}")
+            logger.error(f"[registry] DB load error: {e}")
             return []
 
     def _make_http_executor(
@@ -74,20 +79,24 @@ class ToolRegistry:
                 if count > rate_limit:
                     return f"Rate limit reached ({rate_limit} req/min). Please wait."
 
-            async with httpx.AsyncClient(timeout=timeout_ms / 1000) as client:
-                if method == "GET":
-                    resp = await client.get(endpoint, params=params, headers=headers)
-                else:
-                    resp = await client.post(endpoint, json=params, headers=headers)
-                if resp.is_error:
-                    return f"Error {resp.status_code}: {resp.text}"
-                return resp.text
+            try:
+                async with httpx.AsyncClient(timeout=timeout_ms / 1000) as client:
+                    if method == "GET":
+                        resp = await client.get(endpoint, params=params, headers=headers)
+                    else:
+                        resp = await client.post(endpoint, json=params, headers=headers)
+                    if resp.is_error:
+                        return f"Error {resp.status_code}: {resp.text}"
+                    return resp.text
+            except Exception as e:
+                return f"[Tool Execution Error] {str(e)}"
 
         return execute
 
     async def load_all(self) -> list[ToolDef]:
         dynamic = await self._load_dynamic_from_db()
         self._dynamic_tools = dynamic
+        self._tools_by_name = {t.name: t for t in self._core_tools + self._dynamic_tools}
         return self._core_tools + self._dynamic_tools
 
     async def execute(self, name: str, params: dict) -> str:
@@ -99,11 +108,10 @@ class ToolRegistry:
         error_msg: str | None = None
 
         try:
-            for tool in self._core_tools + self._dynamic_tools:
-                if tool.name == name:
-                    result = await tool.execute(params)
-                    success = True
-                    break
+            tool = self._tools_by_name.get(name)
+            if tool:
+                result = await tool.execute(params)
+                success = True
             else:
                 result = f"Tool '{name}' not found"
         except Exception as e:
@@ -126,6 +134,6 @@ class ToolRegistry:
                     error_msg,
                 )
             except Exception as log_err:
-                print(f"[registry] Failed to log tool execution: {log_err}")
+                logger.error(f"[registry] Failed to log tool execution: {log_err}")
 
         return result
