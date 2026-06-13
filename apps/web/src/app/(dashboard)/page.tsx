@@ -1,23 +1,20 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { MessageSquare, Users, ShoppingCart, TrendingUp } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { MessageSquare, Users, ShoppingCart, TrendingUp } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 function useAuth() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-    } else {
-      setReady(true);
-    }
+    apiClient("/auth/me")
+      .then(() => setReady(true))
+      .catch(() => router.push("/login"));
   }, [router]);
 
   return ready;
@@ -27,28 +24,44 @@ export default function DashboardPage() {
   const isAuthenticated = useAuth();
 
   const { data: conversations } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: () => apiClient<any[]>('/conversations'),
+    queryKey: ["conversations"],
+    queryFn: () => apiClient<any[]>("/conversations"),
     enabled: isAuthenticated,
   });
 
   const { data: customers } = useQuery({
-    queryKey: ['customers'],
-    queryFn: () => apiClient<any[]>('/customers'),
+    queryKey: ["customers"],
+    queryFn: () => apiClient<any[]>("/customers"),
     enabled: isAuthenticated,
   });
 
   if (!isAuthenticated) return null;
 
-  const activeConversations = conversations?.filter((c: any) => c.status === 'active').length || 0;
+  const activeConversations =
+    conversations?.filter((c: any) => c.status === "active").length || 0;
   const leadCount = customers?.length || 0;
   const orderCount = 0; // Will be fetched from /orders in production
 
   const stats = [
-    { title: 'Conversas Ativas', value: activeConversations, icon: MessageSquare, color: 'blue' },
-    { title: 'Leads', value: leadCount, icon: Users, color: 'green' },
-    { title: 'Pedidos Hoje', value: orderCount, icon: ShoppingCart, color: 'orange' },
-    { title: 'Taxa de Conversão', value: '--%', icon: TrendingUp, color: 'purple' },
+    {
+      title: "Conversas Ativas",
+      value: activeConversations,
+      icon: MessageSquare,
+      color: "blue",
+    },
+    { title: "Leads", value: leadCount, icon: Users, color: "green" },
+    {
+      title: "Pedidos Hoje",
+      value: orderCount,
+      icon: ShoppingCart,
+      color: "orange",
+    },
+    {
+      title: "Taxa de Conversão",
+      value: "--%",
+      icon: TrendingUp,
+      color: "purple",
+    },
   ];
 
   return (
@@ -58,10 +71,10 @@ export default function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           const colorMap: Record<string, string> = {
-            blue: 'bg-blue-50 text-blue-600',
-            green: 'bg-green-50 text-green-600',
-            orange: 'bg-orange-50 text-orange-600',
-            purple: 'bg-purple-50 text-purple-600',
+            blue: "bg-blue-50 text-blue-600",
+            green: "bg-green-50 text-green-600",
+            orange: "bg-orange-50 text-orange-600",
+            purple: "bg-purple-50 text-purple-600",
           };
           return (
             <Card key={stat.title}>
@@ -89,11 +102,11 @@ export default function DashboardPage() {
                   <div>
                     <p className="font-medium">{conv.whatsappId}</p>
                     <p className="text-sm text-gray-500">
-                      {conv.classification || 'Sem classificação'}
+                      {conv.classification || "Sem classificação"}
                     </p>
                   </div>
                   <span className="text-sm text-gray-400">
-                    {new Date(conv.updatedAt).toLocaleDateString('pt-BR')}
+                    {new Date(conv.updatedAt).toLocaleDateString("pt-BR")}
                   </span>
                 </div>
               </Card>

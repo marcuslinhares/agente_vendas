@@ -1,33 +1,37 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import { apiClient } from '@/lib/api-client';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Search } from 'lucide-react';
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/api-client";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { MessageSquare, Search } from "lucide-react";
 
-const statusColor: Record<string, 'default' | 'success' | 'warning' | 'danger'> = {
-  active: 'success',
-  closed: 'default',
-  followup: 'warning',
+const statusColor: Record<
+  string,
+  "default" | "success" | "warning" | "danger"
+> = {
+  active: "success",
+  closed: "default",
+  followup: "warning",
 };
 
-const classColor: Record<string, 'default' | 'success' | 'warning' | 'danger'> = {
-  lead_quente: 'success',
-  lead_morno: 'warning',
-  lead_frio: 'danger',
-  cliente: 'default',
-};
+const classColor: Record<string, "default" | "success" | "warning" | "danger"> =
+  {
+    lead_quente: "success",
+    lead_morno: "warning",
+    lead_frio: "danger",
+    cliente: "default",
+  };
 
 export default function ConversationsPage() {
   const router = useRouter();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   const { data: conversations, isLoading } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: () => apiClient<any[]>('/conversations'),
+    queryKey: ["conversations"],
+    queryFn: () => apiClient<any[]>("/conversations"),
   });
 
   const filtered = conversations?.filter((c: any) =>
@@ -71,18 +75,20 @@ export default function ConversationsPage() {
             </div>
             <div className="flex items-center gap-2">
               {conv.classification && (
-                <Badge variant={classColor[conv.classification] || 'default'}>
-                  {conv.classification.replace('lead_', '')}
+                <Badge variant={classColor[conv.classification] || "default"}>
+                  {conv.classification.replace("lead_", "")}
                 </Badge>
               )}
-              <Badge variant={statusColor[conv.status] || 'default'}>
+              <Badge variant={statusColor[conv.status] || "default"}>
                 {conv.status}
               </Badge>
             </div>
           </div>
         ))}
         {filtered?.length === 0 && (
-          <p className="py-8 text-center text-gray-500">Nenhuma conversa encontrada</p>
+          <p className="py-8 text-center text-gray-500">
+            Nenhuma conversa encontrada
+          </p>
         )}
       </div>
     </div>

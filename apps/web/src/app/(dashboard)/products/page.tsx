@@ -1,15 +1,15 @@
 import { z } from 'zod';
 'use client';
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Dialog } from '@/components/ui/dialog';
-import { Plus, Edit2, Search } from 'lucide-react';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog } from "@/components/ui/dialog";
+import { Plus, Edit2, Search } from "lucide-react";
 
 
 const productSchema = z.object({
@@ -89,29 +89,34 @@ function ProductForm({
 
 export default function ProductsPage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => apiClient<any>('/products'),
+    queryKey: ["products"],
+    queryFn: () => apiClient<any>("/products"),
   });
 
   const products = data?.products || data || [];
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => apiClient('/products', { method: 'POST', body: JSON.stringify(body) }),
+    mutationFn: (body: any) =>
+      apiClient("/products", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       setDialogOpen(false);
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: (body: any) => apiClient(`/products/${editingProduct.id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    mutationFn: (body: any) =>
+      apiClient(`/products/${editingProduct.id}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       setDialogOpen(false);
       setEditingProduct(null);
     },
@@ -166,19 +171,28 @@ export default function ProductsPage() {
               <div>
                 <div className="mb-2 flex items-start justify-between">
                   <h3 className="font-semibold">{product.name}</h3>
-                  <button onClick={() => openEdit(product)} className="text-gray-400 hover:text-blue-600">
+                  <button
+                    onClick={() => openEdit(product)}
+                    className="text-gray-400 hover:text-blue-600"
+                  >
                     <Edit2 className="h-4 w-4" />
                   </button>
                 </div>
-                <p className="mb-2 text-sm text-gray-500">{product.description}</p>
+                <p className="mb-2 text-sm text-gray-500">
+                  {product.description}
+                </p>
                 {product.category && <Badge>{product.category}</Badge>}
               </div>
               <div className="mt-4 flex items-center justify-between border-t pt-3">
                 <span className="text-lg font-bold text-green-600">
                   R$ {parseFloat(product.price).toFixed(2)}
                 </span>
-                <span className={`text-sm ${product.stock > 0 ? 'text-gray-600' : 'text-red-500'}`}>
-                  {product.stock > 0 ? `${product.stock} em estoque` : 'Fora de estoque'}
+                <span
+                  className={`text-sm ${product.stock > 0 ? "text-gray-600" : "text-red-500"}`}
+                >
+                  {product.stock > 0
+                    ? `${product.stock} em estoque`
+                    : "Fora de estoque"}
                 </span>
               </div>
             </div>

@@ -1,20 +1,15 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
-  MessageSquare,
-  Users,
-  Wrench,
-  TrendingUp,
-} from 'lucide-react';
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { MessageSquare, Users, Wrench, TrendingUp } from "lucide-react";
 
 export default function AnalyticsPage() {
   const { data, isLoading } = useQuery({
-    queryKey: ['analytics'],
-    queryFn: () => apiClient<any>('/analytics/overview'),
+    queryKey: ["analytics"],
+    queryFn: () => apiClient<any>("/analytics/overview"),
   });
 
   if (isLoading) return <div className="p-8">Carregando...</div>;
@@ -22,17 +17,37 @@ export default function AnalyticsPage() {
   if (!data) return <div className="p-8">Sem dados disponíveis</div>;
 
   const stats = [
-    { title: 'Conversas', value: data.conversations?.total || 0, icon: MessageSquare, color: 'blue' },
-    { title: 'Ativas', value: data.conversations?.active || 0, icon: TrendingUp, color: 'green' },
-    { title: 'Mensagens', value: data.messages || 0, icon: Users, color: 'orange' },
-    { title: 'Tools Executadas', value: data.toolCalls || 0, icon: Wrench, color: 'purple' },
+    {
+      title: "Conversas",
+      value: data.conversations?.total || 0,
+      icon: MessageSquare,
+      color: "blue",
+    },
+    {
+      title: "Ativas",
+      value: data.conversations?.active || 0,
+      icon: TrendingUp,
+      color: "green",
+    },
+    {
+      title: "Mensagens",
+      value: data.messages || 0,
+      icon: Users,
+      color: "orange",
+    },
+    {
+      title: "Tools Executadas",
+      value: data.toolCalls || 0,
+      icon: Wrench,
+      color: "purple",
+    },
   ];
 
   const colorMap: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    orange: 'bg-orange-50 text-orange-600',
-    purple: 'bg-purple-50 text-purple-600',
+    blue: "bg-blue-50 text-blue-600",
+    green: "bg-green-50 text-green-600",
+    orange: "bg-orange-50 text-orange-600",
+    purple: "bg-purple-50 text-purple-600",
   };
 
   return (
@@ -65,8 +80,13 @@ export default function AnalyticsPage() {
           </CardHeader>
           <div className="space-y-3">
             {data.byClassification?.map((item: any) => (
-              <div key={item.classification} className="flex items-center justify-between">
-                <span className="text-sm capitalize">{item.classification?.replace('_', ' ')}</span>
+              <div
+                key={item.classification}
+                className="flex items-center justify-between"
+              >
+                <span className="text-sm capitalize">
+                  {item.classification?.replace("_", " ")}
+                </span>
                 <div className="flex items-center gap-3">
                   <div className="h-2 w-32 rounded-full bg-gray-100">
                     <div
@@ -89,7 +109,10 @@ export default function AnalyticsPage() {
           </CardHeader>
           <div className="space-y-3">
             {data.topTools?.map((item: any, i: number) => (
-              <div key={item.tool} className="flex items-center justify-between">
+              <div
+                key={item.tool}
+                className="flex items-center justify-between"
+              >
                 <span className="text-sm">
                   <span className="mr-2 font-mono text-gray-400">#{i + 1}</span>
                   {item.tool}
@@ -98,7 +121,9 @@ export default function AnalyticsPage() {
               </div>
             ))}
             {(!data.topTools || data.topTools.length === 0) && (
-              <p className="text-sm text-gray-500">Nenhuma tool executada ainda</p>
+              <p className="text-sm text-gray-500">
+                Nenhuma tool executada ainda
+              </p>
             )}
           </div>
         </Card>
