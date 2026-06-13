@@ -20,14 +20,9 @@ class MemoryGateNode:
             for m in history[-5:]  # last 5 messages for gate decision
         )
 
-        prompt = (
-            f"Analyze this user message in a sales conversation.\n\n"
-            f'User message: "{user_msg}"\n\n'
-            f"Recent messages:\n{messages_text}\n\n"
-            f"Does the user's message reference something said earlier in the conversation "
-            f"(more than 20 messages ago or in a previous session)?\n"
-            f'Respond ONLY with JSON: {{"trigger_l3": true/false, "reason": "..."}}'
-        )
+        from app.graph.prompts import MEMORY_GATE_PROMPT
+
+        prompt = MEMORY_GATE_PROMPT.format(user_msg=user_msg, messages_text=messages_text)
 
         response = await self._client.chat.completions.create(
             model=get_memory_gate_model(),
