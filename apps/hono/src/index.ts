@@ -50,7 +50,6 @@ if (!process.env.EVOLUTION_API_URL) {
 }
 
 const server = serve({ fetch: app.fetch, port: PORT }, () => {
-  console.log(`✅ Hono server running on port ${PORT}`);
   startOutboxConsumer().catch(console.error);
 });
 
