@@ -1,5 +1,6 @@
 import base64
 
+import anyio
 from openai import AsyncOpenAI
 
 from app.config import settings
@@ -19,7 +20,7 @@ class ParseClassifyNode:
             parts = media_url.split("/")
             bucket = parts[-2] if len(parts) >= 2 else "conversations-media"
             key = "/".join(parts[-2:])
-            image_bytes = download_media(bucket, key)
+            image_bytes = await anyio.to_thread.run_sync(download_media, bucket, key)
 
             b64 = base64.b64encode(image_bytes).decode("utf-8")
 
@@ -66,7 +67,7 @@ class ParseClassifyNode:
             parts = media_url.split("/")
             bucket = parts[-2] if len(parts) >= 2 else "conversations-media"
             key = "/".join(parts[-2:])
-            audio_bytes = download_media(bucket, key)
+            audio_bytes = await anyio.to_thread.run_sync(download_media, bucket, key)
 
             from app.services.voice import VoiceService
 
