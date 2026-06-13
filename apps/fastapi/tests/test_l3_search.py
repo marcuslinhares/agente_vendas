@@ -1,8 +1,10 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from app.graph.nodes.l3_search import L3SearchNode
 from app.graph.state import AgentState
+
 
 @pytest.fixture
 def empty_state() -> AgentState:
@@ -60,7 +62,9 @@ async def test_run_only_media(empty_state):
         result = await node.run(state)
 
         assert result == {"l3_memories": [{"content": "memory2"}]}
-        mock_clip.assert_awaited_once_with("http://test/conversations-media/img.jpg", "conv-123", "NOW()")
+        mock_clip.assert_awaited_once_with(
+            "http://test/conversations-media/img.jpg", "conv-123", "NOW()"
+        )
 
 @pytest.mark.asyncio
 async def test_run_both_deduplication(empty_state):
@@ -95,7 +99,9 @@ async def test_search_by_clip(mock_get_pool, mock_embed_image, mock_download_med
 
     mock_pool = MagicMock()
     mock_pool.fetch = AsyncMock()
-    mock_pool.fetch.return_value = [{"content": "clip_mem", "media_url": "url", "media_type": "image", "score": 0.9}]
+    mock_pool.fetch.return_value = [
+        {"content": "clip_mem", "media_url": "url", "media_type": "image", "score": 0.9}
+    ]
     mock_get_pool.return_value = mock_pool
 
     result = await node._search_by_clip("http://test/bucket/image.jpg", "conv-123", "2023-01-01")
