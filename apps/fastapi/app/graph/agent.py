@@ -16,15 +16,19 @@ def build_agent() -> StateGraph:
     workflow = StateGraph(AgentState)
 
     # Register nodes
-    workflow.add_node("parse_classify", ParseClassifyNode().run)
-    workflow.add_node("memory_hydrate", MemoryHydrateNode().run)
-    workflow.add_node("memory_gate", MemoryGateNode().run)
-    workflow.add_node("agent_router", AgentRouterNode().run)
-    workflow.add_node("l3_search", L3SearchNode().run)
-    workflow.add_node("sales_agent", SalesAgentNode().run)
-    workflow.add_node("support_agent", SupportAgentNode().run)
-    workflow.add_node("followup_agent", FollowUpAgentNode().run)
-    workflow.add_node("post_process", PostProcessNode().run)
+    nodes = [
+        ("parse_classify", ParseClassifyNode),
+        ("memory_hydrate", MemoryHydrateNode),
+        ("memory_gate", MemoryGateNode),
+        ("agent_router", AgentRouterNode),
+        ("l3_search", L3SearchNode),
+        ("sales_agent", SalesAgentNode),
+        ("support_agent", SupportAgentNode),
+        ("followup_agent", FollowUpAgentNode),
+        ("post_process", PostProcessNode),
+    ]
+    for name, node_class in nodes:
+        workflow.add_node(name, node_class().run)
 
     # Main flow
     workflow.set_entry_point("parse_classify")
@@ -51,9 +55,8 @@ def build_agent() -> StateGraph:
     )
 
     # All specialists go to post_process
-    workflow.add_edge("sales_agent", "post_process")
-    workflow.add_edge("support_agent", "post_process")
-    workflow.add_edge("followup_agent", "post_process")
+    for specialist in ["sales_agent", "support_agent", "followup_agent"]:
+        workflow.add_edge(specialist, "post_process")
     workflow.add_edge("post_process", END)
 
     return workflow.compile()  # type: ignore[return-value]
