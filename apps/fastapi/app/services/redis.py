@@ -1,3 +1,4 @@
+import logging
 import asyncio
 import json
 from collections.abc import AsyncIterator
@@ -5,6 +6,8 @@ from collections.abc import AsyncIterator
 from redis.asyncio import Redis
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 redis_client: Redis | None = None
 
@@ -49,7 +52,7 @@ async def consume_stream(
                 for msg_id, fields in messages:  # type: ignore[misc]
                     yield str(msg_id), json.loads(fields["payload"])  # type: ignore[index,arg-type,call-overload]
         except Exception as e:
-            print(f"[redis] consume error: {e}")
+            logger.error(f"[redis] consume error: {e}")
             await asyncio.sleep(1)
 
 
