@@ -1,6 +1,6 @@
-import logging
 import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator
 
 from redis.asyncio import Redis
