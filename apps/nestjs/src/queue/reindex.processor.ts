@@ -39,16 +39,58 @@ export class ReindexProcessor extends WorkerHost {
       return;
     }
 
-    let indexed = 0;
-
+    // Filter out products that already have valid embeddings
+    const productsToProcess = [];
     for (const product of products) {
       const existing = await this.embRepo.findOne({ where: { productId: product.id } });
       if (existing && existing.embeddingClip) {
         continue; // Already has valid embedding
       }
+      productsToProcess.push(product);
+    }
+
+    if (productsToProcess.length === 0) {
+      this.logger.log('Reindex complete: 0 products indexed (all up to date)');
+      return;
+    }
+
+    // Prepare texts for batch embedding
+    const textsToEmbed = productsToProcess.map(product => `${product.name}: ${product.description || ''}`);
+
+    // Generate text embeddings in batch, chunking to avoid API limits
+    let embeddings: string[] = [];
+    const CHUNK_SIZE = 500;
+
+    try {
+      const { OpenAI } = await import('openai');
+      const client = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+        baseURL: process.env.OPENROUTER_BASE_URL || undefined,
+      });
+
+      for (let i = 0; i < textsToEmbed.length; i += CHUNK_SIZE) {
+        const chunk = textsToEmbed.slice(i, i + CHUNK_SIZE);
+        const response = await client.embeddings.create({
+          model: process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
+          input: chunk,
+        });
+        const chunkEmbeddings = response.data.map(d => JSON.stringify(d.embedding));
+        embeddings = embeddings.concat(chunkEmbeddings);
+      }
+    } catch (err) {
+      this.logger.warn(`Batch text embedding failed: ${err}`);
+      // Initialize with nulls to continue processing
+      embeddings = new Array(productsToProcess.length).fill(null);
+    }
+
+    let indexed = 0;
+
+    for (let i = 0; i < productsToProcess.length; i++) {
+      const product = productsToProcess[i];
+      const text = textsToEmbed[i];
+      const embeddingText = embeddings[i];
 
       try {
-        const text = `${product.name}: ${product.description || ''}`;
         let embeddingClip: string | null = null;
 
         // If product has an image, download it for CLIP embedding
@@ -70,23 +112,6 @@ export class ReindexProcessor extends WorkerHost {
           } catch (err) {
             this.logger.warn(`Failed to process image for ${product.name}: ${err}`);
           }
-        }
-
-        // Generate text embedding via OpenAI API (or OpenRouter)
-        let embeddingText: string | null = null;
-        try {
-          const { OpenAI } = await import('openai');
-          const client = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-            baseURL: process.env.OPENROUTER_BASE_URL || undefined,
-          });
-          const response = await client.embeddings.create({
-            model: process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
-            input: text,
-          });
-          embeddingText = JSON.stringify(response.data[0].embedding);
-        } catch (err) {
-          this.logger.warn(`Text embedding failed for ${product.name}: ${err}`);
         }
 
         const emb = new ProductEmbedding();
