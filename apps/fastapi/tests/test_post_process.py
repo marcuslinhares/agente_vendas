@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from app.graph.nodes.post_process import PostProcessNode
 from app.graph.state import AgentState
+
 
 @pytest.mark.asyncio
 async def test_post_process_text_embedding_fallback():
@@ -30,11 +32,11 @@ async def test_post_process_text_embedding_fallback():
         "embedding_text": None,
     }
 
-    with patch.object(node, '_get_text_embedding', new_callable=AsyncMock) as mock_embed:
+    with patch.object(node, "_get_text_embedding", new_callable=AsyncMock) as mock_embed:
         mock_embed.side_effect = Exception("Simulated embedding failure")
 
         result = await node.run(state)
 
         mock_embed.assert_awaited_once_with("Test fallback")
         assert result["embedding_text"] is None
-        assert result["embedding_clip"] is None # Assuming no media
+        assert result["embedding_clip"] is None  # Assuming no media
