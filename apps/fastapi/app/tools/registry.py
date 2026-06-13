@@ -9,6 +9,8 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
+logger = logging.getLogger(__name__)
+
 @dataclass
 class ToolDef:
     name: str
@@ -27,6 +29,7 @@ class ToolRegistry:
     def register_core(self, tool: ToolDef) -> None:
         self._core_tools.append(tool)
         self._tools_by_name[tool.name] = tool
+        logger.info("Registered tool: %s", tool.name)
 
     async def _load_dynamic_from_db(self) -> list[ToolDef]:
         from app.services.postgres import get_pool
