@@ -63,8 +63,7 @@ async def test_run_uses_parsed_content():
     """Should use parsed_content when calling LLM."""
     node = SupportAgentNode()
     state = create_mock_state(
-        parsed_content="Meu pedido ainda não chegou",
-        raw_content="Onde tá meu bagulho????"
+        parsed_content="Meu pedido ainda não chegou", raw_content="Onde tá meu bagulho????"
     )
 
     mock_client = MagicMock()
@@ -77,7 +76,7 @@ async def test_run_uses_parsed_content():
 
     with (
         patch("app.graph.nodes.agent_support.create_llm_client", return_value=mock_client),
-        patch("app.graph.nodes.agent_support.get_chat_model", return_value="test-model")
+        patch("app.graph.nodes.agent_support.get_chat_model", return_value="test-model"),
     ):
         result = await node.run(state)
 
@@ -95,10 +94,7 @@ async def test_run_uses_parsed_content():
 async def test_run_uses_raw_content_if_no_parsed_content():
     """Should fallback to raw_content if parsed_content is missing."""
     node = SupportAgentNode()
-    state = create_mock_state(
-        parsed_content="",
-        raw_content="Onde tá meu bagulho????"
-    )
+    state = create_mock_state(parsed_content="", raw_content="Onde tá meu bagulho????")
 
     mock_client = MagicMock()
     mock_client.chat.completions.create = AsyncMock()
@@ -110,7 +106,7 @@ async def test_run_uses_raw_content_if_no_parsed_content():
 
     with (
         patch("app.graph.nodes.agent_support.create_llm_client", return_value=mock_client),
-        patch("app.graph.nodes.agent_support.get_chat_model", return_value="test-model")
+        patch("app.graph.nodes.agent_support.get_chat_model", return_value="test-model"),
     ):
         result = await node.run(state)
 
@@ -137,7 +133,7 @@ async def test_run_handles_empty_response():
 
     with (
         patch("app.graph.nodes.agent_support.create_llm_client", return_value=mock_client),
-        patch("app.graph.nodes.agent_support.get_chat_model", return_value="test-model")
+        patch("app.graph.nodes.agent_support.get_chat_model", return_value="test-model"),
     ):
         result = await node.run(state)
 
@@ -163,7 +159,7 @@ async def test_run_initializes_client():
 
     with (
         patch("app.graph.nodes.agent_support.create_llm_client") as mock_create_client,
-        patch("app.graph.nodes.agent_support.get_chat_model", return_value="test-model")
+        patch("app.graph.nodes.agent_support.get_chat_model", return_value="test-model"),
     ):
         result = await node.run(state)
 
