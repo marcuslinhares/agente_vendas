@@ -79,15 +79,22 @@ class ParseClassifyNode:
             print(f"[parse_classify] Transcription error: {e}")
             return f"[Áudio enviado pelo cliente: {raw_content or 'sem transcrição'}]"
 
+    _PEDIDO_WORDS = ("quero", "comprar", "pedir", "pedido")
+    _SAUDACAO_WORDS = ("oi", "ola", "bom dia", "boa tarde", "hey")
+    _AGRADECIMENTO_WORDS = ("obrigado", "valeu", "brigado")
+
     def _classify_intent(self, text: str) -> str:
         """Classify user intent based on message content."""
         text_lower = text.lower()
-        if any(w in text_lower for w in ["quero", "comprar", "pedir", "pedido"]):
-            return "pedido"
-        if any(w in text_lower for w in ["oi", "ola", "bom dia", "boa tarde", "hey"]):
-            return "saudacao"
-        if any(w in text_lower for w in ["obrigado", "valeu", "brigado"]):
-            return "agradecimento"
+        for w in self._PEDIDO_WORDS:
+            if w in text_lower:
+                return "pedido"
+        for w in self._SAUDACAO_WORDS:
+            if w in text_lower:
+                return "saudacao"
+        for w in self._AGRADECIMENTO_WORDS:
+            if w in text_lower:
+                return "agradecimento"
         return "duvida"
 
     async def run(self, state: AgentState) -> dict:
