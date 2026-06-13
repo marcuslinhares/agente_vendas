@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useRouter, usePathname } from 'next/navigation';
-import { apiClient } from '@/lib/api-client';
+import { useRouter, usePathname } from "next/navigation";
+import { apiClient } from "@/lib/api-client";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -13,19 +13,19 @@ import {
   Megaphone,
   Settings,
   LogOut,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/conversations', label: 'Conversas', icon: MessageSquare },
-  { href: '/products', label: 'Produtos', icon: Package },
-  { href: '/customers', label: 'Clientes', icon: Users },
-  { href: '/orders', label: 'Pedidos', icon: ShoppingCart },
-  { href: '/tools', label: 'Tools', icon: Wrench },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/campaigns', label: 'Campanhas', icon: Megaphone },
-  { href: '/settings', label: 'Configurações', icon: Settings },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/conversations", label: "Conversas", icon: MessageSquare },
+  { href: "/products", label: "Produtos", icon: Package },
+  { href: "/customers", label: "Clientes", icon: Users },
+  { href: "/orders", label: "Pedidos", icon: ShoppingCart },
+  { href: "/tools", label: "Tools", icon: Wrench },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/campaigns", label: "Campanhas", icon: Megaphone },
+  { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
 export default function DashboardLayout({
@@ -37,8 +37,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
 
   function handleLogout() {
-    apiClient('/auth/logout', { method: 'POST' }).finally(() => {
-      router.push('/login');
+    apiClient("/auth/logout", { method: "POST" }).finally(() => {
+      router.push("/login");
     });
   }
 
@@ -53,16 +53,17 @@ export default function DashboardLayout({
         <nav className="flex-1 space-y-1 p-4">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const isActive =
+              pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <button
                 key={item.href}
                 onClick={() => router.push(item.href)}
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   isActive
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-100',
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-600 hover:bg-gray-100",
                 )}
               >
                 <Icon className="h-5 w-5" />
