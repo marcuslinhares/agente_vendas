@@ -1,6 +1,10 @@
 """Routes requests to the appropriate specialized agent based on intent."""
 
+import logging
+
 from app.graph.state import AgentState
+
+logger = logging.getLogger(__name__)
 
 
 class AgentRouterNode:
@@ -27,7 +31,7 @@ class AgentRouterNode:
         # If intent is clear from the message, route directly
         selected_agent = intent_to_agent.get(intent, "sales_agent")
 
-        print(f"[router] Intent '{intent}' → {selected_agent} agent")
+        logger.info(f"[router] Intent '{intent}' → {selected_agent} agent")
 
         return {
             "selected_agent": selected_agent,
