@@ -1,6 +1,6 @@
 """Unit tests for ParseClassifyNode."""
 
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -260,13 +260,18 @@ async def test_parse_classify_describes_image_success():
             with patch("app.graph.nodes.parse_classify.get_chat_model") as mock_get_model:
                 mock_get_model.return_value = "gpt-4o"
 
-                result = await node._describe_image("http://minio/conversations-media/image.jpg", "Olha essa camiseta")
+                result = await node._describe_image(
+                    "http://minio/conversations-media/image.jpg", "Olha essa camiseta"
+                )
 
                 assert result == "Uma camiseta vermelha de algodão."
 
-                mock_download.assert_called_once_with("conversations-media", "conversations-media/image.jpg")
+                mock_download.assert_called_once_with(
+                    "conversations-media", "conversations-media/image.jpg"
+                )
                 mock_create_llm.assert_called_once()
                 mock_create.assert_awaited_once()
+
 
 @pytest.mark.asyncio
 async def test_parse_classify_describes_image_fallback():
@@ -276,7 +281,11 @@ async def test_parse_classify_describes_image_fallback():
     with patch("app.graph.nodes.parse_classify.download_media") as mock_download:
         mock_download.side_effect = Exception("MinIO offline")
 
-        result = await node._describe_image("http://minio/conversations-media/image.jpg", "Olha essa camiseta")
+        result = await node._describe_image(
+            "http://minio/conversations-media/image.jpg", "Olha essa camiseta"
+        )
 
         assert result == "[Imagem enviada pelo cliente: Olha essa camiseta]"
-        mock_download.assert_called_once_with("conversations-media", "conversations-media/image.jpg")
+        mock_download.assert_called_once_with(
+            "conversations-media", "conversations-media/image.jpg"
+        )
