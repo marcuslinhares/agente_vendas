@@ -73,6 +73,7 @@ async def test_agent_router_missing_intent(empty_state: AgentState):
     # Empty string is not in the dictionary, so it falls back to the default 'sales_agent'
     assert result["selected_agent"] == "sales_agent"
 
+
 @pytest.mark.asyncio
 async def test_agent_router_unknown_intent(empty_state: AgentState):
     """Should fallback to 'sales_agent' for unknown intents."""
