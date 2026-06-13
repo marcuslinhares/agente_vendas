@@ -1,5 +1,5 @@
 fastapi==0.115.0
-langgraph==0.2.76
+langgraph==1.2.2
 langchain-openai==0.1.25
 asyncpg==0.30.0
 redis[hiredis]==5.2.0
