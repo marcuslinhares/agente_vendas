@@ -1,3 +1,5 @@
+from typing import Any, Sequence, Tuple, Type
+
 from langgraph.graph import END, StateGraph
 
 from app.graph.nodes.agent_followup import FollowUpAgentNode
@@ -16,7 +18,7 @@ def build_agent() -> StateGraph:
     workflow = StateGraph(AgentState)
 
     # Register nodes
-    nodes = [
+    nodes: Sequence[Tuple[str, Any]] = [
         ("parse_classify", ParseClassifyNode),
         ("memory_hydrate", MemoryHydrateNode),
         ("memory_gate", MemoryGateNode),
