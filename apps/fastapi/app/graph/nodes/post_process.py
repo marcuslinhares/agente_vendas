@@ -1,3 +1,4 @@
+import anyio
 import logging
 
 from app.graph.state import AgentState
@@ -77,7 +78,9 @@ class PostProcessNode:
                 bucket = parts[-2] if len(parts) >= 2 else "conversations-media"
                 key = "/".join(parts[-2:])
                 image_bytes = download_media(bucket, key)
-                embedding_clip = ClipService.embed_image(image_bytes)
+                embedding_clip = await anyio.to_thread.run_sync(
+                    ClipService.embed_image, image_bytes
+                )
                 logger.info(f"[post_process] CLIP embedding generated ({len(embedding_clip)} dims)")
             except Exception as e:
                 logger.error(f"[post_process] CLIP error: {e}")
