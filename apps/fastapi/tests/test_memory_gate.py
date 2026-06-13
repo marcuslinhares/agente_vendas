@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from app.graph.nodes.memory_gate import MemoryGateNode
 from app.graph.state import AgentState
+
 
 @pytest.fixture
 def base_state() -> AgentState:
@@ -28,6 +30,7 @@ def base_state() -> AgentState:
         "embedding_clip": None,
         "embedding_text": None,
     }
+
 
 @pytest.mark.asyncio
 async def test_memory_gate_exception_returns_false(base_state: AgentState):
