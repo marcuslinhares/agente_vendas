@@ -236,3 +236,97 @@ async def test_parse_classify_detects_thanks():
             result = await node.run(state)
 
             assert result["intent"] == "agradecimento"
+
+
+@pytest.mark.asyncio
+async def test_parse_classify_handles_audio_success():
+    """Should transcribe audio successfully via MinIO and Whisper."""
+    node = ParseClassifyNode()
+
+    state: AgentState = {
+        "whatsapp_id": "5511999999999@c.us",
+        "conversation_id": "existing-uuid",
+        "message_id": "test-ulid",
+        "raw_content": "",
+        "media_url": "https://minio.example.com/my-bucket/audio.ogg",
+        "media_type": "audio",
+        "parsed_content": "",
+        "intent": "",
+        "customer_id": None,
+        "l1_messages": [],
+        "l2_summary": "",
+        "l3_memories": [],
+        "l3_triggered": False,
+        "agent_response": "",
+        "tool_calls": [],
+        "metadata": {},
+        "embedding_clip": None,
+        "embedding_text": None,
+    }
+
+    with patch(
+        "app.graph.nodes.parse_classify.get_conversation_by_whatsapp", new_callable=AsyncMock
+    ) as mock_get:
+        mock_get.return_value = {"id": "existing-uuid", "status": "active", "message_count": 5}
+        with (
+            patch("app.graph.nodes.parse_classify.create_conversation", new_callable=AsyncMock),
+            patch("app.graph.nodes.parse_classify.download_media") as mock_download,
+        ):
+            mock_download.return_value = b"fake-audio-bytes"
+            with patch("app.services.voice.VoiceService") as mock_voice_class:
+                mock_voice_instance = AsyncMock()
+                mock_voice_instance.transcribe.return_value = "This is a test transcript"
+                mock_voice_class.return_value = mock_voice_instance
+
+                result = await node.run(state)
+
+                mock_download.assert_called_once_with("my-bucket", "my-bucket/audio.ogg")
+                mock_voice_class.assert_called_once()
+                mock_voice_instance.transcribe.assert_awaited_once_with(b"fake-audio-bytes")
+                assert result["parsed_content"] == "[Áudio transcrito: This is a test transcript]"
+                assert result["intent"] == "duvida"
+
+
+@pytest.mark.asyncio
+async def test_transcribe_audio_error_fallback():
+    """Should return a fallback string when transcription fails."""
+    node = ParseClassifyNode()
+
+    state: AgentState = {
+        "whatsapp_id": "5511999999999@c.us",
+        "conversation_id": "existing-uuid",
+        "message_id": "test-ulid",
+        "raw_content": "Original text",
+        "media_url": "https://minio.example.com/audio.ogg",
+        "media_type": "audio",
+        "parsed_content": "",
+        "intent": "",
+        "customer_id": None,
+        "l1_messages": [],
+        "l2_summary": "",
+        "l3_memories": [],
+        "l3_triggered": False,
+        "agent_response": "",
+        "tool_calls": [],
+        "metadata": {},
+        "embedding_clip": None,
+        "embedding_text": None,
+    }
+
+    with patch(
+        "app.graph.nodes.parse_classify.get_conversation_by_whatsapp", new_callable=AsyncMock
+    ) as mock_get:
+        mock_get.return_value = {"id": "existing-uuid", "status": "active", "message_count": 5}
+        with (
+            patch("app.graph.nodes.parse_classify.create_conversation", new_callable=AsyncMock),
+            patch("app.graph.nodes.parse_classify.download_media") as mock_download,
+        ):
+            mock_download.side_effect = Exception("MinIO error")
+
+            result = await node.run(state)
+
+            assert mock_download.call_count == 1
+            assert (
+                result["parsed_content"]
+                == "[Áudio transcrito: [Áudio enviado pelo cliente: Original text]]"
+            )
