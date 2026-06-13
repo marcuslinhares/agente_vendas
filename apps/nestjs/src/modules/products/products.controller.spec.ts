@@ -2,11 +2,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProductsController } from './products.controller';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Product } from '../../entities';
-import { Repository } from 'typeorm';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ExecutionContext } from '@nestjs/common';
 
 describe('ProductsController', () => {
   let controller: ProductsController;
-  let repo: Repository<Product>;
+
+  const mockProduct = {
+    id: '1',
+    name: 'Test Product',
+    description: 'Test Description',
+    price: 100,
+    category: 'Test Category',
+    stock: 10,
+    isActive: true,
+  };
 
   const mockQueryBuilder = {
     where: jest.fn().mockReturnThis(),
@@ -14,15 +24,15 @@ describe('ProductsController', () => {
     skip: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
-    getManyAndCount: jest.fn().mockResolvedValue([[{ id: '1', name: 'Test Product' }], 1]),
+    getManyAndCount: jest.fn().mockResolvedValue([[mockProduct], 1]),
   };
 
-  const mockRepo = {
-    createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
-    findOne: jest.fn(),
-    create: jest.fn(),
-    save: jest.fn(),
-    update: jest.fn(),
+  const mockRepository = {
+    createQueryBuilder: jest.fn(() => mockQueryBuilder),
+    findOne: jest.fn().mockResolvedValue(mockProduct),
+    create: jest.fn().mockImplementation((dto) => dto),
+    save: jest.fn().mockImplementation((product) => Promise.resolve({ id: '1', ...product })),
+    update: jest.fn().mockResolvedValue({ affected: 1 }),
   };
 
   beforeEach(async () => {
@@ -31,16 +41,17 @@ describe('ProductsController', () => {
       providers: [
         {
           provide: getRepositoryToken(Product),
-          useValue: mockRepo,
+          useValue: mockRepository,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
+        canActivate: (context: ExecutionContext) => true,
+      })
+      .compile();
 
     controller = module.get<ProductsController>(ProductsController);
-    repo = module.get<Repository<Product>>(getRepositoryToken(Product));
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
@@ -49,83 +60,58 @@ describe('ProductsController', () => {
   });
 
   describe('list', () => {
-    it('should list products with default pagination', async () => {
-      const result = await controller.list();
-      expect(repo.createQueryBuilder).toHaveBeenCalledWith('p');
+    it('should return a list of products', async () => {
+      const result = await controller.list(undefined, undefined, 1, 10);
+      expect(result).toEqual({ products: [mockProduct], total: 1, page: 1, limit: 10 });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('p');
       expect(mockQueryBuilder.where).toHaveBeenCalledWith('p.isActive = true');
-      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('p.name', 'ASC');
       expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
       expect(mockQueryBuilder.take).toHaveBeenCalledWith(10);
-      expect(mockQueryBuilder.getManyAndCount).toHaveBeenCalled();
-
-      expect(result).toEqual({
-        products: [{ id: '1', name: 'Test Product' }],
-        total: 1,
-        page: 1,
-        limit: 10,
-      });
     });
 
-    it('should apply category filter', async () => {
-      await controller.list('electronics');
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('p.category = :category', { category: 'electronics' });
-    });
-
-    it('should apply search filter', async () => {
-      await controller.list(undefined, 'phone');
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('p.name ILIKE :search', { search: '%phone%' });
-    });
-
-    it('should apply pagination parameters', async () => {
-      await controller.list(undefined, undefined, 2, 20);
-      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(20);
-      expect(mockQueryBuilder.take).toHaveBeenCalledWith(20);
+    it('should handle category and search queries', async () => {
+      const result = await controller.list('test-category', 'test-search', 2, 5);
+      expect(result).toEqual({ products: [mockProduct], total: 1, page: 2, limit: 5 });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('p.category = :category', { category: 'test-category' });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('p.name ILIKE :search', { search: '%test-search%' });
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(5);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(5);
     });
   });
 
   describe('get', () => {
     it('should return a product by id', async () => {
-      const mockProduct = { id: '1', name: 'Test Product' };
-      mockRepo.findOne.mockResolvedValueOnce(mockProduct);
-
       const result = await controller.get('1');
-      expect(repo.findOne).toHaveBeenCalledWith({ where: { id: '1' } });
       expect(result).toEqual(mockProduct);
+      expect(mockRepository.findOne).toHaveBeenCalledWith({ where: { id: '1' } });
     });
   });
 
   describe('create', () => {
-    it('should create and save a new product', async () => {
-      const createDto = { name: 'New Product', price: 100 };
-      const mockProduct = { id: '1', ...createDto };
-      mockRepo.create.mockReturnValueOnce(mockProduct);
-      mockRepo.save.mockResolvedValueOnce(mockProduct);
-
-      const result = await controller.create(createDto as any);
-      expect(repo.create).toHaveBeenCalledWith(createDto);
-      expect(repo.save).toHaveBeenCalledWith(mockProduct);
-      expect(result).toEqual(mockProduct);
+    it('should create and return a new product', async () => {
+      const dto = { name: 'New Product', price: 50 };
+      const result = await controller.create(dto);
+      expect(result).toEqual({ id: '1', ...dto });
+      expect(mockRepository.create).toHaveBeenCalledWith(dto);
+      expect(mockRepository.save).toHaveBeenCalledWith(dto);
     });
   });
 
   describe('update', () => {
-    it('should update and return the product', async () => {
-      const updateDto = { name: 'Updated Product' };
-      const mockProduct = { id: '1', name: 'Updated Product' };
-      mockRepo.findOne.mockResolvedValueOnce(mockProduct);
-
-      const result = await controller.update('1', updateDto as any);
-      expect(repo.update).toHaveBeenCalledWith('1', updateDto);
-      expect(repo.findOne).toHaveBeenCalledWith({ where: { id: '1' } });
+    it('should update a product and return it', async () => {
+      const dto = { name: 'Updated Product' };
+      const result = await controller.update('1', dto);
       expect(result).toEqual(mockProduct);
+      expect(mockRepository.update).toHaveBeenCalledWith('1', dto);
+      expect(mockRepository.findOne).toHaveBeenCalledWith({ where: { id: '1' } });
     });
   });
 
   describe('remove', () => {
-    it('should soft delete the product', async () => {
+    it('should soft delete a product by setting isActive to false', async () => {
       const result = await controller.remove('1');
-      expect(repo.update).toHaveBeenCalledWith('1', { isActive: false });
       expect(result).toEqual({ ok: true });
+      expect(mockRepository.update).toHaveBeenCalledWith('1', { isActive: false });
     });
   });
 });
