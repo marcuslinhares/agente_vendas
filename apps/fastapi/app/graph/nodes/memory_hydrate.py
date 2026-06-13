@@ -1,3 +1,5 @@
+import asyncio
+
 from app.graph.state import AgentState
 from app.services.postgres import get_conversation_summary, get_last_messages
 
@@ -6,11 +8,12 @@ class MemoryHydrateNode:
     async def run(self, state: AgentState) -> dict:
         conv_id = state["conversation_id"]
 
-        # L1: Last 10 messages
-        l1 = await get_last_messages(conv_id, limit=10)
+        # Gather both queries concurrently
+        l1, l2 = await asyncio.gather(
+            get_last_messages(conv_id, limit=10), get_conversation_summary(conv_id)
+        )
 
-        # L2: Conversation summary
-        l2 = await get_conversation_summary(conv_id) or ""
+        l2 = l2 or ""
 
         return {
             "l1_messages": l1,
