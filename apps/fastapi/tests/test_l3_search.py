@@ -29,11 +29,13 @@ def empty_state() -> AgentState:
         "embedding_text": None,
     }
 
+
 @pytest.mark.asyncio
 async def test_run_no_query_and_no_media(empty_state):
     node = L3SearchNode()
     result = await node.run(empty_state)
     assert result == {"l3_memories": []}
+
 
 @pytest.mark.asyncio
 async def test_run_only_query_text(empty_state):
@@ -48,6 +50,7 @@ async def test_run_only_query_text(empty_state):
 
         assert result == {"l3_memories": [{"content": "memory1"}]}
         mock_text.assert_awaited_once_with("test query", "conv-123", "NOW()")
+
 
 @pytest.mark.asyncio
 async def test_run_only_media(empty_state):
@@ -66,6 +69,7 @@ async def test_run_only_media(empty_state):
             "http://test/conversations-media/img.jpg", "conv-123", "NOW()"
         )
 
+
 @pytest.mark.asyncio
 async def test_run_both_deduplication(empty_state):
     node = L3SearchNode()
@@ -74,9 +78,10 @@ async def test_run_both_deduplication(empty_state):
     state["media_url"] = "http://test/conversations-media/img.jpg"
     state["media_type"] = "image"
 
-    with patch.object(node, "_search_by_text", new_callable=AsyncMock) as mock_text, \
-         patch.object(node, "_search_by_clip", new_callable=AsyncMock) as mock_clip:
-
+    with (
+        patch.object(node, "_search_by_text", new_callable=AsyncMock) as mock_text,
+        patch.object(node, "_search_by_clip", new_callable=AsyncMock) as mock_clip,
+    ):
         mock_clip.return_value = [{"content": "memory1"}, {"content": "memory2"}]
         mock_text.return_value = [{"content": "memory2"}, {"content": "memory3"}]
 
@@ -86,6 +91,7 @@ async def test_run_both_deduplication(empty_state):
         assert len(result["l3_memories"]) == 3
         contents = [m["content"] for m in result["l3_memories"]]
         assert contents == ["memory1", "memory2", "memory3"]
+
 
 @pytest.mark.asyncio
 @patch("app.graph.nodes.l3_search.download_media")
@@ -113,6 +119,7 @@ async def test_search_by_clip(mock_get_pool, mock_embed_image, mock_download_med
     assert len(result) == 1
     assert result[0]["content"] == "clip_mem"
 
+
 @pytest.mark.asyncio
 @patch("app.graph.nodes.l3_search.download_media")
 async def test_search_by_clip_exception(mock_download_media):
@@ -124,6 +131,7 @@ async def test_search_by_clip_exception(mock_download_media):
     result = await node._search_by_clip("http://test/bucket/image.jpg", "conv-123", "2023-01-01")
 
     assert result == []
+
 
 @pytest.mark.asyncio
 @patch("app.graph.nodes.l3_search.create_llm_client")
