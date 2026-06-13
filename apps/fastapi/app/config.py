@@ -10,8 +10,8 @@ class Settings(BaseSettings):
 
     # MinIO
     minio_endpoint: str = "localhost:9000"
-    minio_access_key: str = ""
-    minio_secret_key: str = ""  # noqa: S105
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"  # noqa: S105
 
     # OpenAI
     openai_api_key: str = ""

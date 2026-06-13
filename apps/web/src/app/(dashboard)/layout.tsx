@@ -36,11 +36,10 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
 
-  const performServerLogout = () => apiClient('/auth/logout', { method: 'POST' });
-  const redirectToLogin = () => router.push('/login');
-
   function handleLogout() {
-    performServerLogout().finally(redirectToLogin);
+    apiClient('/auth/logout', { method: 'POST' }).finally(() => {
+      router.push('/login');
+    });
   }
 
   return (

@@ -1,13 +1,10 @@
 import json
-import logging
 
 from openai import AsyncOpenAI
 
 from app.config import settings
 from app.graph.state import AgentState
 from app.services.llm import create_llm_client, get_memory_gate_model
-
-logger = logging.getLogger(__name__)
 
 
 class MemoryGateNode:
@@ -23,9 +20,14 @@ class MemoryGateNode:
             for m in history[-5:]  # last 5 messages for gate decision
         )
 
-        from app.graph.prompts import MEMORY_GATE_PROMPT
-
-        prompt = MEMORY_GATE_PROMPT.format(user_msg=user_msg, messages_text=messages_text)
+        prompt = (
+            f"Analyze this user message in a sales conversation.\n\n"
+            f'User message: "{user_msg}"\n\n'
+            f"Recent messages:\n{messages_text}\n\n"
+            f"Does the user's message reference something said earlier in the conversation "
+            f"(more than 20 messages ago or in a previous session)?\n"
+            f'Respond ONLY with JSON: {{"trigger_l3": true/false, "reason": "..."}}'
+        )
 
         response = await self._client.chat.completions.create(
             model=get_memory_gate_model(),
@@ -38,7 +40,7 @@ class MemoryGateNode:
 
     async def run(self, state: AgentState) -> dict:
         if not settings.openai_api_key and not settings.openrouter_api_key:
-            logger.warning("[memory_gate] No LLM API key configured — skipping gate")
+            print("[memory_gate] No LLM API key configured — skipping gate")
             return {"l3_triggered": False}
 
         try:
@@ -48,8 +50,8 @@ class MemoryGateNode:
             )
             triggered = result.get("trigger_l3", False)
             if triggered:
-                logger.info(f"[memory_gate] L3 triggered: {result.get('reason', '')}")
+                print(f"[memory_gate] L3 triggered: {result.get('reason', '')}")
             return {"l3_triggered": triggered}
         except Exception as e:
-            logger.error(f"[memory_gate] LLM error: {e}")
+            print(f"[memory_gate] LLM error: {e}")
             return {"l3_triggered": False}

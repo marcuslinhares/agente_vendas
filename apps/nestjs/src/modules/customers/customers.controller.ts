@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Brackets } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Customer } from '../../entities';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { IsString, IsOptional, IsIn } from 'class-validator';
@@ -29,10 +29,7 @@ export class CustomersController {
   ) {
     const qb = this.repo.createQueryBuilder('c').orderBy('c.lastContactAt', 'DESC');
     if (classification) qb.andWhere('c.classification = :classification', { classification });
-    if (search) qb.andWhere(new Brackets(sqb => {
-      sqb.where('c.name ILIKE :search', { search: `%${search}%` })
-         .orWhere('c.whatsappId ILIKE :search', { search: `%${search}%` });
-    }));
+    if (search) qb.andWhere('c.name ILIKE :search OR c.whatsappId ILIKE :search', { search: `%${search}%` });
     return qb.getMany();
   }
 

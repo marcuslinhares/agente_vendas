@@ -11,17 +11,9 @@ import { User } from '../../entities';
   imports: [
     TypeOrmModule.forFeature([User]),
     PassportModule,
-    JwtModule.registerAsync({
-      useFactory: () => {
-        const jwtSecret = process.env.JWT_SECRET;
-        if (!jwtSecret) {
-          throw new Error('JWT_SECRET environment variable is missing');
-        }
-        return {
-          secret: jwtSecret,
-          signOptions: { expiresIn: '7d' },
-        };
-      },
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+      signOptions: { expiresIn: '7d' },
     }),
   ],
   controllers: [AuthController],

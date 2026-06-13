@@ -1,4 +1,3 @@
-import { z } from 'zod';
 'use client';
 
 import { useState } from 'react';
@@ -11,87 +10,12 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
 import { Plus, Edit2, Search } from 'lucide-react';
 
-
-const productSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório'),
-  description: z.string().optional().default(''),
-  price: z.number().min(0, 'Preço deve ser maior ou igual a 0'),
-  category: z.string().optional().default(''),
-  stock: z.number().int().min(0, 'Estoque deve ser maior ou igual a 0'),
-});
-
-type ProductFormData = z.infer<typeof productSchema>;
-
-function ProductForm({
-  initialData,
-  onSubmit,
-  onCancel,
-  isPending,
-}: {
-  initialData?: any;
-  onSubmit: (data: ProductFormData) => void;
-  onCancel: () => void;
-  isPending: boolean;
-}) {
-  const [form, setForm] = useState<ProductFormData>({
-    name: initialData?.name || '',
-    description: initialData?.description || '',
-    price: initialData?.price ? parseFloat(initialData.price) : 0,
-    category: initialData?.category || '',
-    stock: initialData?.stock || 0,
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = productSchema.safeParse(form);
-    if (result.success) {
-      onSubmit(result.data);
-    } else {
-      console.error('Validation failed', result.error);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium">Nome</label>
-        <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Descrição</label>
-        <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium">Preço</label>
-          <Input type="number" step="0.01" value={form.price}
-            onChange={e => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} required />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium">Estoque</label>
-          <Input type="number" value={form.stock}
-            onChange={e => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} />
-        </div>
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Categoria</label>
-        <Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} />
-      </div>
-      <div className="flex justify-end gap-3">
-        <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" disabled={isPending}>
-          {initialData ? 'Atualizar' : 'Criar'}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
 export default function ProductsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [form, setForm] = useState({ name: '', description: '', price: 0, category: '', stock: 0 });
 
   const { data, isLoading } = useQuery({
     queryKey: ['products'],
@@ -105,6 +29,7 @@ export default function ProductsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setDialogOpen(false);
+      resetForm();
     },
   });
 
@@ -114,24 +39,38 @@ export default function ProductsPage() {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setDialogOpen(false);
       setEditingProduct(null);
+      resetForm();
     },
   });
 
+  function resetForm() {
+    setForm({ name: '', description: '', price: 0, category: '', stock: 0 });
+  }
+
   function openCreate() {
     setEditingProduct(null);
+    resetForm();
     setDialogOpen(true);
   }
 
   function openEdit(product: any) {
     setEditingProduct(product);
+    setForm({
+      name: product.name,
+      description: product.description || '',
+      price: parseFloat(product.price) || 0,
+      category: product.category || '',
+      stock: product.stock || 0,
+    });
     setDialogOpen(true);
   }
 
-  function handleSave(data: ProductFormData) {
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     if (editingProduct) {
-      updateMutation.mutate(data);
+      updateMutation.mutate(form);
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(form);
     }
   }
 
@@ -188,12 +127,38 @@ export default function ProductsPage() {
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}
         title={editingProduct ? 'Editar Produto' : 'Novo Produto'}>
-        <ProductForm
-          initialData={editingProduct}
-          onSubmit={handleSave}
-          onCancel={() => setDialogOpen(false)}
-          isPending={createMutation.isPending || updateMutation.isPending}
-        />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium">Nome</label>
+            <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Descrição</label>
+            <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Preço</label>
+              <Input type="number" step="0.01" value={form.price}
+                onChange={e => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} required />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Estoque</label>
+              <Input type="number" value={form.stock}
+                onChange={e => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Categoria</label>
+            <Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+              {editingProduct ? 'Atualizar' : 'Criar'}
+            </Button>
+          </div>
+        </form>
       </Dialog>
     </div>
   );

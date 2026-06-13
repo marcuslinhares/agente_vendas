@@ -15,10 +15,13 @@ class SalesAgentNode:
         self.max_turns = 5
 
     def _build_system_prompt(self, state: AgentState) -> str:
-        from app.graph.prompts import SALES_AGENT_SYSTEM_PROMPT
-
-        intent = state.get("intent", "unknown")
-        parts = [SALES_AGENT_SYSTEM_PROMPT.format(intent=intent)]
+        parts = [
+            "You are a sales assistant for a WhatsApp store in Brazil.",
+            "You help customers find products, answer questions, and close orders.",
+            "Always respond in Brazilian Portuguese (pt-BR).",
+            f"Current intent: {state.get('intent', 'unknown')}",
+            "",
+        ]
 
         # L1: Recent messages (fewer for simple intents to save tokens)
         intent = state.get("intent", "")

@@ -49,21 +49,19 @@ export class CampaignsController {
     });
 
     let sent = 0;
-    const pipeline = this.redis.pipeline();
     for (const customer of customers) {
       const message = campaign.messageTemplate || 'Olá!';
       const personalized = message
         .replace('{{nome}}', customer.name || '')
         .replace('{{whatsapp}}', customer.whatsappId || '');
 
-      pipeline.xadd('whatsapp:outbox', '*', 'payload', JSON.stringify({
+      await this.redis.xadd('whatsapp:outbox', '*', 'payload', JSON.stringify({
         id: ulid(),
         to: customer.whatsappId,
         text: personalized,
       }));
       sent++;
     }
-    await pipeline.exec();
 
     campaign.sentCount = sent;
     campaign.totalTarget = customers.length;
