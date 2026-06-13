@@ -14,7 +14,7 @@
     "hono": "^4.6.0",
     "ioredis": "^5.4.0",
     "ulid": "^2.3.0",
-    "zod": "^3.23.0"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
