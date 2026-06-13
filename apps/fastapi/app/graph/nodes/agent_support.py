@@ -9,12 +9,9 @@ class SupportAgentNode:
         self._client = None
 
     def _build_system_prompt(self, state: AgentState) -> str:
-        parts = [
-            "You are a customer support assistant for a WhatsApp store in Brazil.",
-            "You handle: complaints, returns, technical issues, delivery status.",
-            "Be empathetic and solution-oriented. Respond in Brazilian Portuguese.",
-            "",
-        ]
+        from app.graph.prompts import SUPPORT_AGENT_SYSTEM_PROMPT
+
+        parts = [SUPPORT_AGENT_SYSTEM_PROMPT]
 
         if state.get("l2_summary"):
             parts.append(f"Conversation summary: {state['l2_summary']}")
