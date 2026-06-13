@@ -9,6 +9,7 @@ from app.services.llm import create_llm_client, get_memory_gate_model
 
 logger = logging.getLogger(__name__)
 
+
 class MemoryGateNode:
     def __init__(self):
         self._client: AsyncOpenAI | None = None
