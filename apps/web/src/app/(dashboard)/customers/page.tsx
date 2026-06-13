@@ -25,6 +25,13 @@ const classLabels: Record<string, string> = {
   cliente: "⭐ Cliente",
 };
 
+const nextClassification: Record<string, string> = {
+  lead_frio: 'lead_morno',
+  lead_morno: 'lead_quente',
+  lead_quente: 'cliente',
+  cliente: 'lead_frio',
+};
+
 export default function CustomersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -56,6 +63,7 @@ export default function CustomersPage() {
   );
 
   function cycleClassification(customer: any) {
+<<<<<<< HEAD
     const order = ["lead_frio", "lead_morno", "lead_quente", "cliente"];
     const currentIndex = order.indexOf(customer.classification);
     const next = order[(currentIndex + 1) % order.length];
@@ -63,6 +71,10 @@ export default function CustomersPage() {
       conversationId: customer.id,
       classification: next,
     });
+=======
+    const next = nextClassification[customer.classification] || 'lead_frio';
+    classifyMutation.mutate({ conversationId: customer.id, classification: next });
+>>>>>>> origin/main
   }
 
   if (isLoading) return <div className="p-8">Carregando...</div>;

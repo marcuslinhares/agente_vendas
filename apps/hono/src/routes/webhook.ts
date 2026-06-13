@@ -17,10 +17,10 @@ webhook.post("/webhook/evolution", async (c) => {
   try {
     const valid = await verifyWebhook(signature, body);
     if (!valid) {
-      return c.json({ error: "invalid signature" }, 401);
+      return c.json({ error: "Invalid signature" }, 401);
     }
   } catch {
-    return c.json({ error: "signature verification failed" }, 401);
+    return c.json({ error: "Invalid signature" }, 401);
   }
 
   let data: any;
