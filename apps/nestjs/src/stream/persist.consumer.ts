@@ -46,14 +46,14 @@ export class PersistConsumer implements OnModuleInit {
     }
   }
 
-  private startConsumer(): void {
+  private async startConsumer(): Promise<void> {
     const group = 'nestjs-workers';
     const stream = 'message:persist';
     const consumer = `consumer-${Date.now()}`;
 
     this.logger.log(`Listening to ${stream} as ${consumer}`);
 
-    setInterval(async () => {
+    while (true) {
       try {
         const result = await this.redis.xreadgroup(
           'GROUP', group, consumer,
@@ -61,19 +61,26 @@ export class PersistConsumer implements OnModuleInit {
           'BLOCK', 2000,
           'STREAMS', stream, '>',
         ) as [string, [string, string[]][]][] | null;
-        if (!result) return;
+        if (!result) continue;
 
         for (const [, messages] of result) {
-          for (const [msgId, fields] of messages) {
-            const record = fieldsToRecord(fields);
-            await this.processMessage(msgId, JSON.parse(record['payload']));
-            await this.redis.xack(stream, group, msgId);
-          }
+          await this.processBatch(messages);
         }
-      } catch (err) {
-        this.logger.error('Consumer error', err);
+      } catch (e: any) {
+        this.logger.error(`Error in persist stream loop: ${e.message}`);
+        await new Promise((r) => setTimeout(r, 5000));
       }
-    }, 1000);
+    }
+  }
+
+  public async processBatch(messages: [string, string[]][]): Promise<void> {
+    const group = 'nestjs-workers';
+    const stream = 'message:persist';
+    for (const [msgId, fields] of messages) {
+      const record = fieldsToRecord(fields);
+      await this.processMessage(msgId, JSON.parse(record['payload']));
+      await this.redis.xack(stream, group, msgId);
+    }
   }
 
   private async processMessage(msgId: string, payload: any): Promise<void> {

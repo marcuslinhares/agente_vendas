@@ -1,3 +1,5 @@
+import logging
+
 from openai import AsyncOpenAI
 
 from app.graph.nodes.post_process import ClipService
@@ -5,6 +7,8 @@ from app.graph.state import AgentState
 from app.services.llm import create_llm_client, get_embedding_model
 from app.services.minio import download_media
 from app.services.postgres import get_pool, vector_search
+
+logger = logging.getLogger(__name__)
 
 
 class L3SearchNode:
@@ -21,7 +25,7 @@ class L3SearchNode:
             key = "/".join(parts[-2:])
             image_bytes = download_media(bucket, key)
             query_embedding = ClipService.embed_image(image_bytes)
-            print(f"[l3_search] CLIP embedding: {len(query_embedding)} dims")
+            logger.info(f"[l3_search] CLIP embedding: {len(query_embedding)} dims")
 
             pool = await get_pool()
             rows = await pool.fetch(
@@ -39,7 +43,7 @@ class L3SearchNode:
             )
             return [dict(r) for r in rows]
         except Exception as e:
-            print(f"[l3_search] CLIP error: {e}")
+            logger.error(f"[l3_search] CLIP error: {e}")
             return []
 
     async def _search_by_text(
@@ -61,7 +65,7 @@ class L3SearchNode:
             limit=5,
             threshold=0.75,
         )
-        print(f"[l3_search] Text search returned {len(results)} results")
+        logger.info(f"[l3_search] Text search returned {len(results)} results")
         return results
 
     async def run(self, state: AgentState) -> dict:
@@ -86,7 +90,7 @@ class L3SearchNode:
         if media_url and state.get("media_type") == "image":
             clip_results = await self._search_by_clip(media_url, state["conversation_id"], cutoff)
             memories.extend(clip_results)
-            print(f"[l3_search] CLIP search returned {len(clip_results)} results")
+            logger.info(f"[l3_search] CLIP search returned {len(clip_results)} results")
 
         if query_text:
             text_results = await self._search_by_text(query_text, state["conversation_id"], cutoff)

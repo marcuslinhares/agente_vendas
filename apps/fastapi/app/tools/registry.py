@@ -1,9 +1,12 @@
 import json
+import logging
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -53,7 +56,7 @@ class ToolRegistry:
                 tools.append(tool)
             return tools
         except Exception as e:
-            print(f"[registry] DB load error: {e}")
+            logger.error(f"DB load error: {e}")
             return []
 
     def _make_http_executor(
@@ -76,14 +79,17 @@ class ToolRegistry:
                 if count > rate_limit:
                     return f"Rate limit reached ({rate_limit} req/min). Please wait."
 
-            async with httpx.AsyncClient(timeout=timeout_ms / 1000) as client:
-                if method == "GET":
-                    resp = await client.get(endpoint, params=params, headers=headers)
-                else:
-                    resp = await client.post(endpoint, json=params, headers=headers)
-                if resp.is_error:
-                    return f"Error {resp.status_code}: {resp.text}"
-                return resp.text
+            try:
+                async with httpx.AsyncClient(timeout=timeout_ms / 1000) as client:
+                    if method == "GET":
+                        resp = await client.get(endpoint, params=params, headers=headers)
+                    else:
+                        resp = await client.post(endpoint, json=params, headers=headers)
+                    if resp.is_error:
+                        return f"Error {resp.status_code}: {resp.text}"
+                    return resp.text
+            except Exception as e:
+                return f"[Tool Execution Error] {str(e)}"
 
         return execute
 
@@ -128,6 +134,6 @@ class ToolRegistry:
                     error_msg,
                 )
             except Exception as log_err:
-                print(f"[registry] Failed to log tool execution: {log_err}")
+                logger.error(f"Failed to log tool execution: {log_err}")
 
         return result
