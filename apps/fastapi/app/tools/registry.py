@@ -1,9 +1,12 @@
 import json
+import logging
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -51,7 +54,7 @@ class ToolRegistry:
                 tools.append(tool)
             return tools
         except Exception as e:
-            print(f"[registry] DB load error: {e}")
+            logger.error(f"[registry] DB load error: {e}")
             return []
 
     def _make_http_executor(
@@ -126,6 +129,6 @@ class ToolRegistry:
                     error_msg,
                 )
             except Exception as log_err:
-                print(f"[registry] Failed to log tool execution: {log_err}")
+                logger.error(f"[registry] Failed to log tool execution: {log_err}")
 
         return result
