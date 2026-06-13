@@ -5,6 +5,7 @@ import pytest
 from app.graph.nodes.agent_followup import FollowUpAgentNode
 from app.graph.state import AgentState
 
+
 @pytest.fixture
 def base_state() -> AgentState:
     return {
@@ -30,6 +31,7 @@ def base_state() -> AgentState:
         "embedding_text": None,
     }
 
+
 @pytest.mark.asyncio
 async def test_followup_intent_followup(base_state):
     """Should return the correct response for 'followup' intent."""
@@ -38,9 +40,11 @@ async def test_followup_intent_followup(base_state):
 
     result = await node.run(base_state)
 
-    assert result["agent_response"] == "Olá! Tudo bem? Só pra saber se de ajuda com nossos produtos."
+    expected = "Olá! Tudo bem? Só pra saber se de ajuda com nossos produtos."
+    assert result["agent_response"] == expected
     assert result["tool_calls"] == []
     assert result["metadata"] == {"agent_type": "followup", "customer_id": "cust-123"}
+
 
 @pytest.mark.asyncio
 async def test_followup_intent_abandono(base_state):
@@ -50,9 +54,11 @@ async def test_followup_intent_abandono(base_state):
 
     result = await node.run(base_state)
 
-    assert result["agent_response"] == "Oi! Notei que você estava de olho nos produtos. Quer ajuda pra escolher?"
+    expected = "Oi! Notei que você estava de olho nos produtos. Quer ajuda pra escolher?"
+    assert result["agent_response"] == expected
     assert result["tool_calls"] == []
     assert result["metadata"] == {"agent_type": "followup", "customer_id": "cust-123"}
+
 
 @pytest.mark.asyncio
 async def test_followup_intent_promocao(base_state):
@@ -62,9 +68,11 @@ async def test_followup_intent_promocao(base_state):
 
     result = await node.run(base_state)
 
-    assert result["agent_response"] == "Temos promoções especiais esta semana! Quer conferir?"
+    expected = "Temos promoções especiais esta semana! Quer conferir?"
+    assert result["agent_response"] == expected
     assert result["tool_calls"] == []
     assert result["metadata"] == {"agent_type": "followup", "customer_id": "cust-123"}
+
 
 @pytest.mark.asyncio
 async def test_followup_intent_unknown(base_state):
@@ -74,9 +82,11 @@ async def test_followup_intent_unknown(base_state):
 
     result = await node.run(base_state)
 
-    assert result["agent_response"] == "Olá! Tudo bem? Só pra saber se de ajuda com nossos produtos."
+    expected = "Olá! Tudo bem? Só pra saber se de ajuda com nossos produtos."
+    assert result["agent_response"] == expected
     assert result["tool_calls"] == []
     assert result["metadata"] == {"agent_type": "followup", "customer_id": "cust-123"}
+
 
 @pytest.mark.asyncio
 async def test_followup_no_customer_id(base_state):
@@ -87,6 +97,7 @@ async def test_followup_no_customer_id(base_state):
 
     result = await node.run(base_state)
 
-    assert result["agent_response"] == "Olá! Tudo bem? Só pra saber se de ajuda com nossos produtos."
+    expected = "Olá! Tudo bem? Só pra saber se de ajuda com nossos produtos."
+    assert result["agent_response"] == expected
     assert result["tool_calls"] == []
     assert result["metadata"] == {"agent_type": "followup", "customer_id": None}
