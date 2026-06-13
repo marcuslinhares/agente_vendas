@@ -1,6 +1,10 @@
+import logging
+
 from app.graph.state import AgentState
 from app.services.llm import create_llm_client, get_embedding_model
 from app.services.minio import download_media
+
+logger = logging.getLogger(__name__)
 
 
 class ClipService:
@@ -74,18 +78,18 @@ class PostProcessNode:
                 key = "/".join(parts[-2:])
                 image_bytes = download_media(bucket, key)
                 embedding_clip = ClipService.embed_image(image_bytes)
-                print(f"[post_process] CLIP embedding generated ({len(embedding_clip)} dims)")
+                logger.info(f"[post_process] CLIP embedding generated ({len(embedding_clip)} dims)")
             except Exception as e:
-                print(f"[post_process] CLIP error: {e}")
+                logger.error(f"[post_process] CLIP error: {e}")
 
         # Text embedding
         source_text = state.get("parsed_content") or state.get("raw_content", "")
         if source_text:
             try:
                 embedding_text = await self._get_text_embedding(source_text)
-                print(f"[post_process] Text embedding generated ({len(embedding_text)} dims)")
+                logger.info(f"[post_process] Text embedding generated ({len(embedding_text)} dims)")
             except Exception as e:
-                print(f"[post_process] Text embedding error: {e}")
+                logger.error(f"[post_process] Text embedding error: {e}")
 
         return {
             "embedding_clip": embedding_clip,

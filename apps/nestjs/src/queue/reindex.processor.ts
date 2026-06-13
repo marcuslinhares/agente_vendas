@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Product, ProductEmbedding } from '../entities';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 
@@ -41,8 +41,15 @@ export class ReindexProcessor extends WorkerHost {
 
     // Filter out products that already have valid embeddings
     const productsToProcess = [];
+    const productIds = products.map(p => p.id);
+    const existingEmbeddings = await this.embRepo.find({ where: { productId: In(productIds) } });
+    const existingMap = new Map<string, ProductEmbedding>();
+    for (const emp of existingEmbeddings) {
+      existingMap.set(emp.productId, emp);
+    }
+
     for (const product of products) {
-      const existing = await this.embRepo.findOne({ where: { productId: product.id } });
+      const existing = existingMap.get(product.id);
       if (existing && existing.embeddingClip) {
         continue; // Already has valid embedding
       }
