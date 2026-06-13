@@ -121,19 +121,20 @@ async def test_run_cache_miss_simple_intent():
 
     mock_llm_response = MockResponse([MockChoice(MockMessage("Generated greeting"))])
 
-    with patch.object(node, "_check_cache", new_callable=AsyncMock) as mock_check:
+    with (
+        patch.object(node, "_check_cache", new_callable=AsyncMock) as mock_check,
+        patch.object(node, "_set_cache", new_callable=AsyncMock) as mock_set,
+        patch("app.graph.nodes.agent_sales.get_chat_model", return_value="test-model"),
+        patch("app.graph.nodes.agent_sales.create_llm_client") as mock_create_client,
+        patch.object(node.tool_registry, "load_all", new_callable=AsyncMock) as mock_load,
+    ):
         mock_check.return_value = None
-        with patch.object(node, "_set_cache", new_callable=AsyncMock) as mock_set:
-            with patch("app.graph.nodes.agent_sales.get_chat_model", return_value="test-model"):
-                with patch("app.graph.nodes.agent_sales.create_llm_client") as mock_create_client:
-                    mock_client = AsyncMock()
-                    mock_client.chat.completions.create.return_value = mock_llm_response
-                    mock_create_client.return_value = mock_client
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create.return_value = mock_llm_response
+        mock_create_client.return_value = mock_client
+        mock_load.return_value = []
 
-                    # Also need to mock tool_registry to avoid actual tool loading
-                    with patch.object(node.tool_registry, "load_all", new_callable=AsyncMock) as mock_load_tools:
-                        mock_load_tools.return_value = []
-                        result = await node.run(state)
+        result = await node.run(state)
 
-                        assert result["agent_response"] == "Generated greeting"
-                        mock_set.assert_awaited_once_with("saudacao", "Olá", "Generated greeting")
+        assert result["agent_response"] == "Generated greeting"
+        mock_set.assert_awaited_once_with("saudacao", "Olá", "Generated greeting")
