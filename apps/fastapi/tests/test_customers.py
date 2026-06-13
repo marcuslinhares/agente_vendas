@@ -5,6 +5,7 @@ import pytest
 from app.tools.core.customers import _classify_client, _schedule_followup, register_customers_tools
 from app.tools.registry import ToolRegistry
 
+
 @pytest.mark.asyncio
 async def test_classify_client():
     # Arrange
@@ -14,7 +15,9 @@ async def test_classify_client():
     }
 
     mock_pool = AsyncMock()
-    with patch("app.services.postgres.get_pool", return_value=mock_pool, new_callable=AsyncMock) as mock_get_pool:
+    with patch(
+        "app.services.postgres.get_pool", return_value=mock_pool, new_callable=AsyncMock
+    ) as mock_get_pool:
         # Act
         result = await _classify_client(params)
 
@@ -27,6 +30,7 @@ async def test_classify_client():
             "test_conv_123",
         )
 
+
 @pytest.mark.asyncio
 async def test_classify_client_default_classification():
     # Arrange
@@ -35,7 +39,9 @@ async def test_classify_client_default_classification():
     }
 
     mock_pool = AsyncMock()
-    with patch("app.services.postgres.get_pool", return_value=mock_pool, new_callable=AsyncMock) as mock_get_pool:
+    with patch(
+        "app.services.postgres.get_pool", return_value=mock_pool, new_callable=AsyncMock
+    ) as mock_get_pool:
         # Act
         result = await _classify_client(params)
 
@@ -47,6 +53,7 @@ async def test_classify_client_default_classification():
             "lead_morno",
             "test_conv_456",
         )
+
 
 @pytest.mark.asyncio
 async def test_classify_client_missing_conversation_id():
@@ -61,6 +68,7 @@ async def test_classify_client_missing_conversation_id():
         with pytest.raises(KeyError) as exc_info:
             await _classify_client(params)
         assert exc_info.value.args[0] == "conversation_id"
+
 
 @pytest.mark.asyncio
 async def test_schedule_followup():
@@ -77,6 +85,7 @@ async def test_schedule_followup():
     # Assert
     assert result == "Follow-up agendado para 5 dias. Mensagem: Oi, lembrando de você!"
 
+
 @pytest.mark.asyncio
 async def test_schedule_followup_defaults():
     # Arrange
@@ -89,6 +98,7 @@ async def test_schedule_followup_defaults():
 
     # Assert
     assert result == "Follow-up agendado para 3 dias. Mensagem: Olá! Como posso ajudar?"
+
 
 def test_register_customers_tools():
     # Arrange
