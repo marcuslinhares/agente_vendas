@@ -5,7 +5,7 @@ asyncpg==0.30.0
 redis[hiredis]==5.2.0
 pgvector==0.3.0
 Pillow==10.4.0
-pydantic==2.9.0
+pydantic==2.13.4
 pydantic-settings==2.5.0
 openai==1.50.0
 ulid-py==1.1.0
