@@ -30,6 +30,6 @@ repos:
     rev: v0.6.0
     hooks:
       - id: ruff
-        args: [--select=S]  # Security rules only
+        args: [--select=S, --ignore=S101]
         name: ruff-security
         files: ^apps/fastapi/

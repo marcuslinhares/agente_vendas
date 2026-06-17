@@ -1,53 +1,17 @@
 import logging
 
-import anyio
-
 from app.graph.state import AgentState
+from app.services.jina import JinaEmbeddingService
 from app.services.llm import create_llm_client, get_embedding_model
 from app.services.minio import download_media
 
 logger = logging.getLogger(__name__)
 
 
-class ClipService:
-    """Singleton CLIP model for image embeddings."""
-
-    _instance = None
-
-    @classmethod
-    def get_instance(cls) -> dict:
-        if cls._instance is None:
-            import open_clip
-            import pillow_avif  # noqa: F401 — ensures AVIF support
-
-            model, _, preprocess = open_clip.create_model_and_transforms(
-                "ViT-B-32", pretrained="laion2b_s34b_b79k"
-            )
-            model.eval()
-            cls._instance = {
-                "model": model,
-                "preprocess": preprocess,
-            }
-        return cls._instance
-
-    @classmethod
-    def embed_image(cls, image_bytes: bytes) -> list[float]:
-        import io
-
-        import torch
-        from PIL import Image
-
-        instance = cls.get_instance()
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        processed = instance["preprocess"](image).unsqueeze(0)
-        with torch.no_grad():
-            embedding = instance["model"].encode_image(processed)
-            return embedding.squeeze().tolist()
-
-
 class PostProcessNode:
     def __init__(self) -> None:
         self._text_embedder = None
+        self._jina = JinaEmbeddingService()
 
     async def _get_text_embedding(self, text: str) -> list[float]:
         if self._text_embedder is None:
@@ -79,12 +43,10 @@ class PostProcessNode:
                 bucket = parts[-2] if len(parts) >= 2 else "conversations-media"
                 key = "/".join(parts[-2:])
                 image_bytes = download_media(bucket, key)
-                embedding_clip = await anyio.to_thread.run_sync(
-                    ClipService.embed_image, image_bytes
-                )
-                logger.info(f"[post_process] CLIP embedding generated ({len(embedding_clip)} dims)")
+                embedding_clip = await self._jina.embed_image(image_bytes)
+                logger.info(f"[post_process] Jina embedding generated ({len(embedding_clip)} dims)")
             except Exception as e:
-                logger.error(f"[post_process] CLIP error: {e}")
+                logger.error(f"[post_process] Jina embedding error: {e}")
 
         # Text embedding
         source_text = state.get("parsed_content") or state.get("raw_content", "")

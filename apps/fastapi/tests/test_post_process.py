@@ -1,132 +1,123 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+"""Unit tests for PostProcessNode (Jina AI)."""
 
 import pytest
 
-from app.graph.nodes.post_process import ClipService, PostProcessNode
+from app.graph.nodes.post_process import PostProcessNode
+from app.graph.state import AgentState
 
 
-def test_clip_service_embed_image():
-    # Mock instance to avoid loading open_clip
-    mock_instance = {"preprocess": MagicMock(), "model": MagicMock()}
-    mock_processed = MagicMock()
-    mock_instance["preprocess"].return_value = mock_processed
-    mock_processed.unsqueeze.return_value = mock_processed
-
-    mock_embedding = MagicMock()
-    mock_embedding.squeeze.return_value = mock_embedding
-    mock_embedding.tolist.return_value = [0.1, 0.2, 0.3]
-    mock_instance["model"].encode_image.return_value = mock_embedding
-
-    with (
-        patch.object(ClipService, "get_instance", return_value=mock_instance),
-        patch("PIL.Image.open") as mock_open,
-        patch("torch.no_grad"),
-    ):
-        mock_image = MagicMock()
-        mock_open.return_value = mock_image
-        mock_image.convert.return_value = mock_image
-
-        result = ClipService.embed_image(b"test_image_bytes")
-
-        assert result == [0.1, 0.2, 0.3]
-        mock_open.assert_called_once()
-        mock_image.convert.assert_called_once_with("RGB")
-        mock_instance["preprocess"].assert_called_once_with(mock_image)
-        mock_instance["model"].encode_image.assert_called_once_with(mock_processed)
-
-
-@pytest.mark.asyncio
-async def test_post_process_node_text_only():
-    node = PostProcessNode()
-    state = {
-        "raw_content": "hello world",
-        "parsed_content": "hello world parsed",
+@pytest.fixture
+def base_state() -> AgentState:
+    return {
+        "tenant_id": "test-tenant",
+        "whatsapp_id": "5511999999999@c.us",
+        "conversation_id": "conv-123",
+        "message_id": "msg-123",
+        "raw_content": "",
         "media_url": None,
         "media_type": None,
-    }
-
-    with patch.object(node, "_get_text_embedding", new_callable=AsyncMock) as mock_text_embed:
-        mock_text_embed.return_value = [0.4, 0.5]
-
-        result = await node.run(state)
-
-        assert result["embedding_clip"] is None
-        assert result["embedding_text"] == [0.4, 0.5]
-        mock_text_embed.assert_awaited_once_with("hello world parsed")
-
-
-@pytest.mark.asyncio
-async def test_post_process_node_image_only():
-    node = PostProcessNode()
-    state = {
-        "raw_content": "",
         "parsed_content": "",
-        "media_url": "http://minio:9000/conversations-media/123/image.jpg",
-        "media_type": "image",
+        "intent": "",
+        "customer_id": None,
+        "l1_messages": [],
+        "l2_summary": "",
+        "l3_memories": [],
+        "l3_triggered": False,
+        "selected_agent": "",
+        "agent_response": "",
+        "tool_calls": [],
+        "metadata": {},
+        "embedding_clip": None,
+        "embedding_text": None,
     }
-
-    with (
-        patch("app.graph.nodes.post_process.download_media") as mock_download,
-        patch.object(ClipService, "embed_image") as mock_embed_image,
-    ):
-        mock_download.return_value = b"image_bytes"
-        mock_embed_image.return_value = [0.6, 0.7]
-
-        result = await node.run(state)
-
-        assert result["embedding_clip"] == [0.6, 0.7]
-        assert result["embedding_text"] is None
-        mock_download.assert_called_once_with("123", "123/image.jpg")
-        mock_embed_image.assert_called_once_with(b"image_bytes")
 
 
 @pytest.mark.asyncio
-async def test_post_process_node_text_and_image():
+async def test_post_process_no_media(base_state):
+    """Should return None embeddings when no media or text."""
     node = PostProcessNode()
-    state = {
-        "raw_content": "hello world",
-        "parsed_content": "hello world parsed",
-        "media_url": "http://minio:9000/my-bucket/folder/img.png",
-        "media_type": "image",
-    }
-
-    with (
-        patch.object(node, "_get_text_embedding", new_callable=AsyncMock) as mock_text_embed,
-        patch("app.graph.nodes.post_process.download_media") as mock_download,
-        patch.object(ClipService, "embed_image") as mock_embed_image,
-    ):
-        mock_text_embed.return_value = [0.4, 0.5]
-        mock_download.return_value = b"image_bytes"
-        mock_embed_image.return_value = [0.6, 0.7]
-
-        result = await node.run(state)
-
-        assert result["embedding_text"] == [0.4, 0.5]
-        assert result["embedding_clip"] == [0.6, 0.7]
-        mock_text_embed.assert_awaited_once_with("hello world parsed")
-        mock_download.assert_called_once_with("folder", "folder/img.png")
-        mock_embed_image.assert_called_once_with(b"image_bytes")
+    result = await node.run(base_state)
+    assert result["embedding_clip"] is None
+    assert result["embedding_text"] is None
 
 
 @pytest.mark.asyncio
-async def test_post_process_node_error_handling():
+async def test_post_process_with_image(base_state, monkeypatch):
+    """Should generate Jina embedding when media is an image."""
+
+    async def mock_embed_image(self, image_bytes):
+        return [0.1] * 512
+
+    monkeypatch.setattr(
+        "app.services.jina.JinaEmbeddingService.embed_image",
+        mock_embed_image,
+    )
+    monkeypatch.setattr(
+        "app.graph.nodes.post_process.download_media",
+        lambda bucket, key: b"fake_image_bytes",
+    )
+
+    state = base_state.copy()
+    state["media_url"] = "http://minio:9000/conversations-media/img.jpg"
+    state["media_type"] = "image"
+
     node = PostProcessNode()
-    state = {
-        "raw_content": "hello world",
-        "parsed_content": "hello world parsed",
-        "media_url": "http://minio:9000/bucket/img.png",
-        "media_type": "image",
-    }
+    result = await node.run(state)
+    assert result["embedding_clip"] == [0.1] * 512
+    assert result["embedding_text"] is None
 
-    with (
-        patch.object(node, "_get_text_embedding", new_callable=AsyncMock) as mock_text_embed,
-        patch("app.graph.nodes.post_process.download_media") as mock_download,
-    ):
-        mock_text_embed.side_effect = Exception("Text API failed")
-        mock_download.side_effect = Exception("Minio download failed")
 
-        result = await node.run(state)
+@pytest.mark.asyncio
+async def test_post_process_with_text(base_state, monkeypatch):
+    """Should generate text embedding when parsed_content exists."""
 
-        # It should handle the exceptions smoothly and return Nones
-        assert result["embedding_text"] is None
-        assert result["embedding_clip"] is None
+    async def mock_create(*args, **kwargs):
+        class MockData:
+            embedding = [0.2] * 1536
+
+        class MockResponse:
+            data = [MockData()]
+
+        return MockResponse()
+
+    monkeypatch.setattr(
+        "app.graph.nodes.post_process.create_llm_client",
+        lambda: type(
+            "MockClient",
+            (),
+            {"embeddings": type("MockEmb", (), {"create": mock_create})()},
+        )(),
+    )
+
+    state = base_state.copy()
+    state["parsed_content"] = "Um produto interessante"
+
+    node = PostProcessNode()
+    result = await node.run(state)
+    assert result["embedding_clip"] is None
+    assert result["embedding_text"] == [0.2] * 1536
+
+
+@pytest.mark.asyncio
+async def test_post_process_jina_error(base_state, monkeypatch):
+    """Should handle Jina API error gracefully (return None, not crash)."""
+
+    async def mock_embed_image(self, image_bytes):
+        raise Exception("Jina API timeout")
+
+    monkeypatch.setattr(
+        "app.services.jina.JinaEmbeddingService.embed_image",
+        mock_embed_image,
+    )
+    monkeypatch.setattr(
+        "app.graph.nodes.post_process.download_media",
+        lambda bucket, key: b"fake_image_bytes",
+    )
+
+    state = base_state.copy()
+    state["media_url"] = "http://minio:9000/conversations-media/img.jpg"
+    state["media_type"] = "image"
+
+    node = PostProcessNode()
+    result = await node.run(state)
+    assert result["embedding_clip"] is None  # Graceful fallback

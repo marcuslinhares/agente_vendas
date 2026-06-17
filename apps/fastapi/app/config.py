@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     enable_multitenancy: bool = False
     default_tenant_id: str = "default"
 
+    # Jina AI (multimodal embeddings)
+    jina_api_key: str = ""
+    jina_base_url: str = "https://api.jina.ai/v1"
+    jina_embedding_model: str = "jina-clip-v2"
+    jina_embedding_dims: int = 512
+
     class Config:
         env_file = ".env"
 

@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager, suppress
 
 import ulid
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 from app.config import settings
 from app.graph.agent import build_agent
@@ -149,3 +150,57 @@ async def ready():
         return {"ready": True}
     except Exception as e:
         return {"ready": False, "error": str(e)}
+
+
+class ProductEmbedRequest(BaseModel):
+    product_id: str
+    image_url: str | None = None
+    text: str
+
+
+class ProductEmbedResponse(BaseModel):
+    product_id: str
+    embedding_clip: list[float] | None = None
+    embedding_text: list[float] | None = None
+    error: str | None = None
+
+
+@app.post("/api/embed/product", response_model=ProductEmbedResponse)
+async def embed_product(req: ProductEmbedRequest):
+    """Generate embeddings for a product. Called by NestJS during reindex."""
+    from app.services.jina import JinaEmbeddingService
+    from app.services.llm import create_llm_client, get_embedding_model
+    from app.services.minio import download_media
+
+    jina = JinaEmbeddingService()
+    client = create_llm_client()
+    embedding_clip = None
+    error = None
+
+    if req.image_url:
+        try:
+            parts = req.image_url.split("/")
+            bucket = parts[-2] if len(parts) >= 2 else "products"
+            key = "/".join(parts[-2:])
+            image_bytes = download_media(bucket, key)
+            embedding_clip = await jina.embed_image(image_bytes)
+        except Exception as e:
+            error = str(e)
+
+    try:
+        response = await client.embeddings.create(
+            model=get_embedding_model(),
+            input=req.text,
+        )
+        embedding_text = response.data[0].embedding
+    except Exception as e:
+        if not error:
+            error = str(e)
+        embedding_text = None
+
+    return ProductEmbedResponse(
+        product_id=req.product_id,
+        embedding_clip=embedding_clip,
+        embedding_text=embedding_text,
+        error=error,
+    )
