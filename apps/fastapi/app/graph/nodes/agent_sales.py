@@ -38,10 +38,29 @@ class SalesAgentNode:
         # L3: Old memories (truncated)
         if state.get("l3_memories"):
             parts.append("=== Relevant past context ===")
+
+            # When the lead sends a photo, product_match results appear here
+            has_product_match = any(
+                m.get("source") == "product_match" for m in state["l3_memories"][:3]
+            )
+            if has_product_match:
+                parts.append(
+                    "NOTA: Quando o lead enviar uma foto e você receber resultados com "
+                    '"source": "product_match" em l3_memories, isso significa que o sistema '
+                    "encontrou produtos no catálogo com aparência similar à foto enviada. "
+                    "Use product_id e product_name para responder, e se necessário chame "
+                    "check_stock(product_id) para verificar disponibilidade."
+                )
+
             for m in state["l3_memories"][:3]:  # max 3 memories
                 score = m.get("score", 0)
-                content = str(m.get("content", ""))[:200]
-                parts.append(f"- {content} (relevance: {score:.2f})")
+                if m.get("source") == "product_match":
+                    name = m.get("product_name", "")
+                    desc = str(m.get("description", ""))[:100]
+                    parts.append(f"- [PRODUTO] {name}: {desc} (relevância: {score:.2f})")
+                else:
+                    content = str(m.get("content", ""))[:200]
+                    parts.append(f"- {content} (relevance: {score:.2f})")
             parts.append("")
 
         return "\n".join(parts)
