@@ -12,7 +12,7 @@
     "@aws-sdk/client-s3": "^3.600.0",
     "@hono/node-server": "^2.0.4",
     "hono": "^4.6.0",
-    "ioredis": "^5.4.0",
+    "ioredis": "^5.11.1",
     "ulid": "^2.3.0",
     "zod": "^4.4.3"
   },
